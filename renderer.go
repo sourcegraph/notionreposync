@@ -17,12 +17,6 @@ type Renderer struct {
 	pageID  notionapi.PageID
 	ctx     context.Context
 
-	page         *notionapi.Page
-	rootBlocks   []notionapi.Block
-	parentBlocks *[]notionapi.Block
-	m            map[ast.Node]notionapi.Block
-	idx          int
-
 	c *Cursor
 }
 
@@ -42,6 +36,8 @@ func (c *Cursor) RichText() *notionapi.RichText {
 		return &block.NumberedListItem.RichText[len(block.NumberedListItem.RichText)-1]
 	case *notionapi.Heading1Block:
 		return &block.Heading1.RichText[len(block.Heading1.RichText)-1]
+	case *notionapi.QuoteBlock:
+		return &block.Quote.RichText[len(block.Quote.RichText)-1]
 	default:
 		fmt.Printf("unknown block type: %T\n", block)
 	}
@@ -62,6 +58,8 @@ func (c *Cursor) AppendRichText(rt *notionapi.RichText) {
 		block.NumberedListItem.RichText = append(block.NumberedListItem.RichText, *rt)
 	case *notionapi.Heading1Block:
 		block.Heading1.RichText = append(block.Heading1.RichText, *rt)
+	case *notionapi.QuoteBlock:
+		block.Quote.RichText = append(block.Quote.RichText, *rt)
 	default:
 		fmt.Printf("unknown block type: %T\n", block)
 		panic("here")
@@ -84,6 +82,8 @@ func (c *Cursor) AppendBlock(b notionapi.Block, things ...string) {
 			block.NumberedListItem.Children = append(block.NumberedListItem.Children, b)
 		case *notionapi.Heading1Block:
 			block.Heading1.Children = append(block.Heading1.Children, b)
+		case *notionapi.QuoteBlock:
+			block.Quote.Children = append(block.Quote.Children, b)
 		default:
 			println("unknown block type: %T\n", block)
 			panic("here")
@@ -117,31 +117,7 @@ func NewRenderer(opts ...renderer.Option) renderer.NodeRenderer {
 	return r
 }
 
-// func (r *Renderer) appendBlock(node ast.Node, block notionapi.Block) {
-// 	if bl, ok := r.myblocks[node]; !ok {
-// 		r.rootBlocks = append(r.rootBlocks, block)
-// 	} else {
-// 		switch bl := bl.(type) {
-// 		case *notionapi.ParagraphBlock:
-// 			bl.Paragraph.Children = append(bl.Paragraph.Children, block)
-// 		case *notionapi.BulletedListItemBlock:
-// 			bl.BulletedListItem.Children = append(bl.BulletedListItem.Children, block)
-// 		case *notionapi.NumberedListItemBlock:
-// 			bl.NumberedListItem.Children = append(bl.NumberedListItem.Children, block)
-// 			// case *notionapi.Heading1Block:
-// 			// 	bl.Heading1.Children = append(bl.Heading1.Children, block)
-// 		default:
-// 			panic("unknown block type: " + fmt.Sprintf("%T", bl))
-// 		}
-// 	}
-// }
-
 func (r *Renderer) AddOptions(...renderer.Option) {}
-
-// func (r *Renderer) Render(w io.Writer, source []byte, n ast.Node) error {
-// 	println("rendering ...")
-// 	return nil
-// }
 
 func (r *Renderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	// blocks
@@ -178,18 +154,6 @@ func (r *Renderer) renderDocument(_ util.BufWriter, source []byte, node ast.Node
 			m:          make(map[ast.Node]notionapi.Block),
 			cur:        node,
 		}
-
-		// pagination := notionapi.Pagination{}
-		// for {
-		// 	resp, err := r.client.Block.GetChildren(r.ctx, notionapi.BlockID(r.pageID), &pagination)
-		// 	if err != nil {
-		// 		return ast.WalkStop, err
-		// 	}
-		// 	r.blocks = append(r.blocks, resp.Results...)
-		// 	if !resp.HasMore {
-		// 		break
-		// 	}
-		// }
 	} else {
 		_, err := r.client.Block.AppendChildren(r.ctx, notionapi.BlockID(r.pageID), &notionapi.AppendBlockChildrenRequest{
 			Children: r.c.rootBlocks,
@@ -219,8 +183,6 @@ func (r *Renderer) renderHeading(w util.BufWriter, source []byte, node ast.Node,
 		r.c.Set(node, block)
 		r.c.Descend(node)
 		r.c.AppendBlock(block)
-		// r.blocks = append(r.blocks, block)
-		// r.appendBlock(node.Parent(), block)
 	} else {
 		r.c.Ascend()
 	}
@@ -229,6 +191,24 @@ func (r *Renderer) renderHeading(w util.BufWriter, source []byte, node ast.Node,
 
 func (r *Renderer) renderBlockquote(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	println("rendering blockquote...", entering, string(node.Text(source)))
+
+	if entering {
+		block := &notionapi.QuoteBlock{
+			BasicBlock: notionapi.BasicBlock{
+				Object: notionapi.ObjectTypeBlock,
+				Type:   notionapi.BlockQuote,
+			},
+			Quote: notionapi.Quote{
+				RichText: []notionapi.RichText{},
+			},
+		}
+		r.c.Set(node, block)
+		r.c.AppendBlock(block)
+		r.c.Descend(node)
+	} else {
+		r.c.Ascend()
+	}
+
 	return ast.WalkContinue, nil
 }
 
@@ -294,7 +274,7 @@ func (r *Renderer) renderFencedCodeBlock(w util.BufWriter, source []byte, node a
 }
 
 func (r *Renderer) renderHTMLBlock(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	return ast.WalkContinue, nil
+	return r.renderCodeBlock(w, source, node, entering)
 }
 
 func (r *Renderer) renderList(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -332,22 +312,11 @@ func (r *Renderer) renderListItem(w util.BufWriter, source []byte, node ast.Node
 				},
 			}
 		}
-		// if n.FirstChild() == node {
-		// 	println("first child")
-		// 	r.c.Set(node.Parent(), block)
-		// 	r.c.Descend(node)
-		// } else {
-		// 	println("after child")
-		// }
 
 		r.c.Set(node, block)
 		r.c.AppendBlock(block, "here")
 		r.c.Descend(node)
 	} else {
-		// if n.LastChild() == node {
-		// 	println("getting out of the list")
-		// 	r.c.Ascend()
-		// }
 		r.c.Ascend()
 	}
 	return ast.WalkContinue, nil
@@ -355,6 +324,11 @@ func (r *Renderer) renderListItem(w util.BufWriter, source []byte, node ast.Node
 
 func (r *Renderer) renderParagraph(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	println("rendering paragraph...", string(node.Text(source)))
+	// Markdown AST has paragraphs inside blockquotes, but it is not supported by Notion, so instead, we just pass through.
+	if node.Parent().Kind() == ast.KindBlockquote {
+		return ast.WalkContinue, nil
+	}
+
 	if entering {
 		block := &notionapi.ParagraphBlock{
 			BasicBlock: notionapi.BasicBlock{
@@ -366,7 +340,6 @@ func (r *Renderer) renderParagraph(w util.BufWriter, source []byte, node ast.Nod
 		r.c.Set(node, block)
 		r.c.AppendBlock(block)
 		r.c.Descend(node)
-		// r.rootBlocks = append(r.rootBlocks, &block)
 	} else {
 		r.c.Ascend()
 	}
@@ -385,6 +358,21 @@ func (r *Renderer) renderTextBlock(w util.BufWriter, source []byte, node ast.Nod
 }
 
 func (r *Renderer) renderThematicBreak(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	if !entering {
+		return ast.WalkContinue, nil
+	}
+
+	block := &notionapi.DividerBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectTypeBlock,
+			Type:   notionapi.BlockTypeDivider,
+		},
+		Divider: notionapi.Divider{},
+	}
+
+	r.c.Set(node, block)
+	r.c.AppendBlock(block)
+
 	return ast.WalkContinue, nil
 }
 
@@ -405,17 +393,6 @@ func (r *Renderer) renderCodeSpan(w util.BufWriter, source []byte, node ast.Node
 		return ast.WalkSkipChildren, nil
 	}
 
-	// n := node.(*ast.Text)
-	// segment := n.Segment
-	//
-	// println("rendering text", entering, string(segment.Value(source)))
-	// if !entering {
-	// 	return ast.WalkContinue, nil
-	// }
-	//
-	// r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: string(segment.Value(source))}})
-	//
-	// println("parent", n.Parent().Kind().String(), "kind", n.Kind().String(), "text", string(segment.Value(source)))
 	return ast.WalkContinue, nil
 }
 
@@ -448,6 +425,21 @@ func (r *Renderer) renderLink(w util.BufWriter, source []byte, node ast.Node, en
 }
 
 func (r *Renderer) renderRawHTML(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	println("rendering raw html...", entering, string(node.Text(source)))
+	// Notion doesn't support this, so we just create a code block instead.
+
+	if entering {
+		n := node.(*ast.RawHTML)
+		l := n.Segments.Len()
+		var txt string
+		for i := 0; i < l; i++ {
+			segment := n.Segments.At(i)
+			txt += string(segment.Value(source))
+		}
+		r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: txt}, Annotations: &notionapi.Annotations{Code: true}})
+		return ast.WalkSkipChildren, nil
+	}
+
 	return ast.WalkContinue, nil
 }
 
@@ -464,39 +456,6 @@ func (r *Renderer) renderText(w util.BufWriter, source []byte, node ast.Node, en
 
 	println("parent", n.Parent().Kind().String(), "kind", n.Kind().String(), "text", string(segment.Value(source)))
 
-	// switch n.Parent().Kind() {
-	// case ast.KindParagraph:
-	// 	block := cur.(*notionapi.ParagraphBlock)
-	// 	block.Paragraph.RichText = append(block.Paragraph.RichText, notionapi.RichText{Text: &notionapi.Text{Content: string(segment.Value(source))}})
-	// case ast.KindEmphasis:
-	// 	switch block := cur.(type) {
-	// 	case *notionapi.ParagraphBlock:
-	// 		block.Paragraph.RichText[len(block.Paragraph.RichText)-1].Text = &notionapi.Text{Content: string(segment.Value(source))}
-	// 	case *notionapi.BulletedListItemBlock:
-	// 		block.BulletedListItem.RichText[len(block.BulletedListItem.RichText)-1].Text = &notionapi.Text{Content: string(segment.Value(source))}
-	// 	case *notionapi.NumberedListItemBlock:
-	// 		block.NumberedListItem.RichText[len(block.NumberedListItem.RichText)-1].Text = &notionapi.Text{Content: string(segment.Value(source))}
-	// 	}
-	// case ast.KindTextBlock:
-	// 	if n.Parent().Parent() != nil && n.Parent().Parent().Kind() == ast.KindListItem {
-	// 		switch block := cur.(type) {
-	// 		case *notionapi.BulletedListItemBlock:
-	// 			block.BulletedListItem.RichText = append(block.BulletedListItem.RichText, notionapi.RichText{Text: &notionapi.Text{Content: string(segment.Value(source))}})
-	// 		case *notionapi.NumberedListItemBlock:
-	// 			block.NumberedListItem.RichText = append(block.NumberedListItem.RichText, notionapi.RichText{Text: &notionapi.Text{Content: string(segment.Value(source))}})
-	// 		}
-	// 	}
-	// case ast.KindList:
-	// 	println("rendering text...", string(segment.Value(source)))
-	// }
-	//
-	// switch cur.GetType() {
-	// case notionapi.BlockTypeParagraph:
-	// 	println("rendering text...", string(segment.Value(source)))
-	// 	block := cur.(*notionapi.ParagraphBlock)
-	// 	block.Paragraph.RichText = append(block.Paragraph.RichText, notionapi.RichText{Text: &notionapi.Text{Content: string(segment.Value(source))}})
-	// }
-
 	return ast.WalkContinue, nil
 }
 
@@ -504,46 +463,6 @@ func (r *Renderer) renderString(w util.BufWriter, source []byte, node ast.Node, 
 	println("rendering string...", string(node.Text(source)))
 	return ast.WalkContinue, nil
 }
-
-// func (r *Renderer) curBlock() notionapi.Block {
-// 	block := r.blocks[len(r.blocks)-1]
-// 	if block.GetHasChildren() {
-// 		switch block := block.(type) {
-// 		case *notionapi.ParagraphBlock:
-// 			return block.Paragraph.Children[len(block.Paragraph.Children)-1]
-// 		case *notionapi.BulletedListItemBlock:
-// 			return block.BulletedListItem.Children[len(block.BulletedListItem.Children)-1]
-// 		case *notionapi.NumberedListItemBlock:
-// 			return block.NumberedListItem.Children[len(block.NumberedListItem.Children)-1]
-// 		case *notionapi.Heading1Block:
-// 			return block.Heading1.Children[len(block.Heading1.Children)-1]
-// 		}
-// 	}
-// 	return block
-// }
-//
-// func (r *Renderer) curRichText() *notionapi.RichText {
-// 	rt := *r.curBlockRichText()
-// 	return &rt[len(rt)-1]
-// }
-//
-// func (r *Renderer) curBlockRichText() *[]notionapi.RichText {
-// 	switch block := r.rootBlocks[len(r.rootBlocks)-1].(type) {
-// 	case *notionapi.ParagraphBlock:
-// 		return &block.Paragraph.RichText
-// 	case *notionapi.BulletedListItemBlock:
-// 		return &block.BulletedListItem.RichText
-// 	case *notionapi.NumberedListItemBlock:
-// 		return &block.NumberedListItem.RichText
-// 	case *notionapi.Heading1Block:
-// 		return &block.Heading1.RichText
-// 	default:
-// 		fmt.Printf("unknown block type: %T\n", block)
-// 	}
-// 	println(len(r.blocks), "blocks")
-// 	panic("nil rich text")
-// }
-//
 
 var supportedLanguages = []string{
 	"abap",

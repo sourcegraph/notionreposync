@@ -2,7 +2,7 @@
 
 This is a **great** _test_ data example, it has some markdown. 
 
-> Here is a quote.
+> Here is a quote. We can have _emph_ and **bold** in here too.
 
 We can also do **bold** and *italic*. Which is amazing! 
 
@@ -33,6 +33,8 @@ r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: txt}, Anno
 return ast.WalkSkipChildren, nil
 ```
 
+---
+
 Incredible it can use syntax highlighting!
 
 
@@ -45,3 +47,12 @@ for c := node.FirstChild(); c != nil; c = c.NextSibling() {
 r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: txt}, Annotations: &notionapi.Annotations{Code: true}})
 return ast.WalkSkipChildren, nil
 ```
+
+What about some HTML block instead ? 
+
+<div class="cta-group">
+<a class="btn btn-primary" href="quickstart">★ Quickstart with <code>sg</code></a>
+<a class="btn" href="../how-to">How-tos</a>
+<a class="btn" href="#troubleshooting">Troubleshooting</a>
+
+And what about <p><del><em>foo</em></del></p> ?
