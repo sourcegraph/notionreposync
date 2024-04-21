@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -12,10 +12,11 @@ import (
 )
 
 type Renderer struct {
+	Config
+
 	docRoot *DocRoot
 	client  *notionapi.Client
 	pageID  notionapi.PageID
-	ctx     context.Context
 
 	c *Cursor
 }
@@ -112,12 +113,19 @@ func (c *Cursor) Ascend() {
 	}
 }
 
-func NewRenderer(opts ...renderer.Option) renderer.NodeRenderer {
-	r := &Renderer{}
+func NewRenderer(docRoot *DocRoot, client *notionapi.Client, pageID notionapi.PageID, opts ...Option) renderer.NodeRenderer {
+	r := &Renderer{
+		docRoot: docRoot,
+		client:  client,
+		pageID:  pageID,
+		Config:  NewConfig(),
+	}
+
+	for _, opt := range opts {
+		opt.SetConfig(&r.Config)
+	}
 	return r
 }
-
-func (r *Renderer) AddOptions(...renderer.Option) {}
 
 func (r *Renderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	// blocks
@@ -155,17 +163,27 @@ func (r *Renderer) renderDocument(_ util.BufWriter, source []byte, node ast.Node
 			cur:        node,
 		}
 	} else {
-		_, err := r.client.Block.AppendChildren(r.ctx, notionapi.BlockID(r.pageID), &notionapi.AppendBlockChildrenRequest{
-			Children: r.c.rootBlocks,
-		})
-		if err != nil {
+		if err := r.writeBlocks(); err != nil {
 			return ast.WalkStop, err
 		}
-
-		// json.NewEncoder(os.Stdout).Encode(r.c.rootBlocks)
 	}
-
 	return ast.WalkContinue, nil
+}
+
+// writeBlocks performs API calls to the notion API to append the blocks to the page, or if the renderer was
+// configured to not use the API, simply pass back the produced blocks to the caller.
+//
+// See WithoutAPI() for more information about the second case.
+func (r *Renderer) writeBlocks() error {
+	if r.Config.testBlocks == nil {
+		_, err := r.client.Block.AppendChildren(r.Context, notionapi.BlockID(r.pageID), &notionapi.AppendBlockChildrenRequest{
+			Children: r.c.rootBlocks,
+		})
+		return err
+	} else {
+		*r.Config.testBlocks = r.c.rootBlocks
+		return nil
+	}
 }
 
 func (r *Renderer) renderHeading(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -412,7 +430,6 @@ func (r *Renderer) renderEmphasis(w util.BufWriter, source []byte, node ast.Node
 			rt.Annotations.Bold = true
 		}
 	}
-
 	return ast.WalkContinue, nil
 }
 
@@ -421,6 +438,26 @@ func (r *Renderer) renderImage(w util.BufWriter, source []byte, node ast.Node, e
 }
 
 func (r *Renderer) renderLink(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	n := node.(*ast.Link)
+	if entering {
+		if IsDangerousURL(n.Destination) {
+			r.renderCodeSpan(w, source, node, entering)
+			return ast.WalkContinue, nil
+		}
+
+		linkText := string(node.Text(source))
+		if linkText == "" {
+			linkText = string(n.Destination)
+		}
+
+		// If it's not an external link, we need to grab the internal page id.
+		if !strings.HasPrefix(string(n.Destination), "http") {
+		}
+
+		r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: linkText, Link: &notionapi.Link{Url: string(n.Destination)}}})
+		return ast.WalkSkipChildren, nil
+	}
+
 	return ast.WalkContinue, nil
 }
 
@@ -563,4 +600,36 @@ func supportedLanguageOrPlainText(lang string) string {
 		}
 	}
 	return "plain text"
+}
+
+var bDataImage = []byte("data:image/")
+var bPng = []byte("png;")
+var bGif = []byte("gif;")
+var bJpeg = []byte("jpeg;")
+var bWebp = []byte("webp;")
+var bSvg = []byte("svg+xml;")
+var bJs = []byte("javascript:")
+var bVb = []byte("vbscript:")
+var bFile = []byte("file:")
+var bData = []byte("data:")
+
+func hasPrefix(s, prefix []byte) bool {
+	return len(s) >= len(prefix) && bytes.Equal(bytes.ToLower(s[0:len(prefix)]), bytes.ToLower(prefix))
+}
+
+// IsDangerousURL returns true if the given url seems a potentially dangerous url,
+// otherwise false.
+// Copied from https://sourcegraph.com/github.com/yuin/goldmark/-/blob/renderer/html/html.go?L997
+func IsDangerousURL(url []byte) bool {
+	if hasPrefix(url, bDataImage) && len(url) >= 11 {
+		v := url[11:]
+		if hasPrefix(v, bPng) || hasPrefix(v, bGif) ||
+			hasPrefix(v, bJpeg) || hasPrefix(v, bWebp) ||
+			hasPrefix(v, bSvg) {
+			return false
+		}
+		return true
+	}
+	return hasPrefix(url, bJs) || hasPrefix(url, bVb) ||
+		hasPrefix(url, bFile) || hasPrefix(url, bData)
 }

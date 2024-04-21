@@ -10,6 +10,8 @@ import (
 
 var pagesDBTitle = "Pages"
 
+// NotionDoc represents a Notion page that is the root of all imported pages from a Git repository holding
+// markdown files.
 type NotionDoc struct {
 	PageID   notionapi.PageID
 	metadata Metadata

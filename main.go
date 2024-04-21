@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -79,17 +80,19 @@ func main() {
 	// 	return nil
 	// })
 	//
-	notionRenderer := Renderer{
-		docRoot: &pagesRoot,
-		client:  client,
-		pageID:  pagesRoot.Folder.childFiles[0].ID,
-		ctx:     context.Background(),
-	}
+	//
+	blocks := []notionapi.Block{}
+	ren := NewRenderer(
+		&pagesRoot,
+		client,
+		pagesRoot.Folder.childFiles[0].ID,
+		WithoutAPI(&blocks),
+	)
 
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
 		goldmark.WithRenderer(
-			renderer.NewRenderer(renderer.WithNodeRenderers(util.Prioritized(&notionRenderer, 1000))),
+			renderer.NewRenderer(renderer.WithNodeRenderers(util.Prioritized(ren, 1000))),
 		),
 	)
 
@@ -100,6 +103,10 @@ func main() {
 	}
 
 	if err := md.Convert(b, io.Discard); err != nil {
+		panic(err)
+	}
+
+	if err := json.NewEncoder(os.Stdout).Encode(blocks); err != nil {
 		panic(err)
 	}
 }

@@ -6,6 +6,8 @@ This is a **great** _test_ data example, it has some markdown.
 
 We can also do **bold** and *italic*. Which is amazing! 
 
+What about [googling](https://google.com) something?
+
 It does lists too! 
 
 - _First_ element
