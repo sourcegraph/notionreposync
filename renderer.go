@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/jomei/notionapi"
+	"github.com/sourcegraph/notionreposync/repository"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/util"
@@ -14,9 +15,9 @@ import (
 type Renderer struct {
 	Config
 
-	docRoot *DocRoot
-	client  *notionapi.Client
-	pageID  notionapi.PageID
+	repo   *repository.Repo
+	client *notionapi.Client
+	pageID notionapi.PageID
 
 	c *Cursor
 }
@@ -113,12 +114,12 @@ func (c *Cursor) Ascend() {
 	}
 }
 
-func NewRenderer(docRoot *DocRoot, client *notionapi.Client, pageID notionapi.PageID, opts ...Option) renderer.NodeRenderer {
+func NewRenderer(repo *repository.Repo, client *notionapi.Client, pageID notionapi.PageID, opts ...Option) renderer.NodeRenderer {
 	r := &Renderer{
-		docRoot: docRoot,
-		client:  client,
-		pageID:  pageID,
-		Config:  NewConfig(),
+		repo:   repo,
+		client: client,
+		pageID: pageID,
+		Config: NewConfig(),
 	}
 
 	for _, opt := range opts {
@@ -452,6 +453,7 @@ func (r *Renderer) renderLink(w util.BufWriter, source []byte, node ast.Node, en
 
 		// If it's not an external link, we need to grab the internal page id.
 		if !strings.HasPrefix(string(n.Destination), "http") {
+			// r.docRoot.findByPageID(r.pageID)
 		}
 
 		r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: linkText, Link: &notionapi.Link{Url: string(n.Destination)}}})

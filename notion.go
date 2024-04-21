@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jomei/notionapi"
+	"github.com/sourcegraph/notionreposync/repository"
 )
 
 var pagesDBTitle = "Pages"
@@ -115,14 +116,14 @@ func (n *NotionDoc) FindPagesDB(ctx context.Context, c *notionapi.Client) (notio
 
 // SyncPagesDB fills the notion page IDs in the pages root with the IDs of their counterpart on Notion.
 // If a page is missing, it will be created on the fly.
-func (n *NotionDoc) SyncPagesDB(ctx context.Context, c *notionapi.Client, pagesRoot *DocRoot) error {
+func (n *NotionDoc) SyncPagesDB(ctx context.Context, c *notionapi.Client, repo *repository.Repo) error {
 	dbID, err := n.FindPagesDB(context.Background(), c)
 	if err != nil {
 		return err
 	}
 
-	pagesRoot.Walk(func(p *DocFile) error {
-		page, err := n.findPageInDB(ctx, c, dbID, p.path)
+	repo.Walk(func(p *repository.Document) error {
+		page, err := n.findPageInDB(ctx, c, dbID, p.Path)
 		if err != nil {
 			if !errors.Is(err, ErrPageNotFoundInDB) {
 				return err
@@ -132,7 +133,7 @@ func (n *NotionDoc) SyncPagesDB(ctx context.Context, c *notionapi.Client, pagesR
 				Properties: map[string]notionapi.Property{
 					"_path": notionapi.RichTextProperty{
 						RichText: []notionapi.RichText{
-							{Text: &notionapi.Text{Content: p.path}},
+							{Text: &notionapi.Text{Content: p.Path}},
 						},
 					},
 				},

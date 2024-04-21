@@ -13,6 +13,8 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/util"
+
+	"github.com/sourcegraph/notionreposync/repository"
 )
 
 func main() {
@@ -33,17 +35,17 @@ func main() {
 		panic(err)
 	}
 
-	pagesRoot := DocRoot{
-		Folder: &Folder{
+	repo := repository.Repo{
+		Folder: &repository.Folder{
 			Name:         ".",
-			path:         "./",
-			childFiles:   []*DocFile{},
-			childFolders: []*Folder{},
+			Path:         "./",
+			ChildFiles:   []*repository.Document{},
+			ChildFolders: []*repository.Folder{},
 		},
 	}
 
 	filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
-		pagesRoot.add(info.IsDir(), strings.TrimPrefix(path, repoPath))
+		repo.Add(info.IsDir(), strings.TrimPrefix(path, repoPath))
 		return nil
 	})
 
@@ -74,19 +76,14 @@ func main() {
 	// 	panic("cannot find pages database")
 	// }
 
-	nd.SyncPagesDB(context.Background(), client, &pagesRoot)
-	// pagesRoot.Walk(func(p *Page) error {
-	// 	println(p.ID)
-	// 	return nil
-	// })
-	//
-	//
+	nd.SyncPagesDB(context.Background(), client, &repo)
 	blocks := []notionapi.Block{}
+
 	ren := NewRenderer(
-		&pagesRoot,
+		&repo,
 		client,
-		pagesRoot.Folder.childFiles[0].ID,
-		WithoutAPI(&blocks),
+		repo.Folder.ChildFiles[0].ID,
+		// WithoutAPI(&blocks),
 	)
 
 	md := goldmark.New(
@@ -96,8 +93,7 @@ func main() {
 		),
 	)
 
-	println(pagesRoot.Folder.childFiles[0].path)
-	b, err := os.ReadFile(filepath.Join(repoPath, pagesRoot.Folder.childFiles[0].path))
+	b, err := os.ReadFile(filepath.Join(repoPath, repo.Folder.ChildFiles[0].Path))
 	if err != nil {
 		panic(err)
 	}
