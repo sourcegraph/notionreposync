@@ -15,6 +15,12 @@ import (
 	"github.com/yuin/goldmark/util"
 )
 
+// See https://developers.notion.com/reference/patch-block-children
+const maxBlocksPerUpdate = 100
+
+// See https://developers.notion.com/reference/request-limits#limits-for-property-values
+const maxRichTextContentLength = 2000
+
 type Renderer struct {
 	Config
 
@@ -57,17 +63,30 @@ func (c *Cursor) Block() notionapi.Block {
 }
 
 func (c *Cursor) AppendRichText(rt *notionapi.RichText) {
+	rts := []notionapi.RichText{*rt}
+
+	// See https://developers.notion.com/reference/request-limits#limits-for-property-values
+	if len(rt.Text.Content) > maxRichTextContentLength {
+		rts = []notionapi.RichText{}
+		chunks := chunkText(rt.Text.Content)
+		for _, chunk := range chunks {
+			chunkRT := *rt
+			chunkRT.Text.Content = chunk
+			rts = append(rts, chunkRT)
+		}
+	}
+
 	switch block := c.m[c.cur].(type) {
 	case *notionapi.ParagraphBlock:
-		block.Paragraph.RichText = append(block.Paragraph.RichText, *rt)
+		block.Paragraph.RichText = append(block.Paragraph.RichText, rts...)
 	case *notionapi.BulletedListItemBlock:
-		block.BulletedListItem.RichText = append(block.BulletedListItem.RichText, *rt)
+		block.BulletedListItem.RichText = append(block.BulletedListItem.RichText, rts...)
 	case *notionapi.NumberedListItemBlock:
-		block.NumberedListItem.RichText = append(block.NumberedListItem.RichText, *rt)
+		block.NumberedListItem.RichText = append(block.NumberedListItem.RichText, rts...)
 	case *notionapi.Heading1Block:
-		block.Heading1.RichText = append(block.Heading1.RichText, *rt)
+		block.Heading1.RichText = append(block.Heading1.RichText, rts...)
 	case *notionapi.QuoteBlock:
-		block.Quote.RichText = append(block.Quote.RichText, *rt)
+		block.Quote.RichText = append(block.Quote.RichText, rts...)
 	default:
 		fmt.Printf("unknown block type: %T\n", block)
 		panic("here")
@@ -201,8 +220,8 @@ func (r *Renderer) writeBlocks() error {
 
 	acc := []notionapi.Block{}
 	for _, block := range r.c.rootBlocks {
-		if len(acc) < 99 {
-			// 99 because otherwise, we'll have one too many block when flushing.
+		if len(acc) < maxBlocksPerUpdate-1 {
+			// Minus one because otherwise, we'll have one too many block when flushing.
 			acc = append(acc, block)
 		} else {
 			_, err := r.client.Block.AppendChildren(r.Context, notionapi.BlockID(r.pageID), &notionapi.AppendBlockChildrenRequest{
@@ -271,20 +290,28 @@ func (r *Renderer) renderCodeBlock(w util.BufWriter, source []byte, node ast.Nod
 			line := node.Lines().At(i)
 			sb.Write(line.Value(source))
 		}
+
+		rts := []notionapi.RichText{{Text: &notionapi.Text{Content: sb.String()}}}
+
+		if sb.Len() > maxRichTextContentLength {
+			rts = []notionapi.RichText{}
+			chunks := chunkText(sb.String())
+			for _, chunk := range chunks {
+				rts = append(rts, notionapi.RichText{Text: &notionapi.Text{Content: chunk}})
+			}
+		}
+
 		block := &notionapi.CodeBlock{
 			BasicBlock: notionapi.BasicBlock{
 				Object: notionapi.ObjectTypeBlock,
 				Type:   notionapi.BlockTypeCode,
 			},
 			Code: notionapi.Code{
-				RichText: []notionapi.RichText{
-					{
-						Text: &notionapi.Text{Content: sb.String()},
-					},
-				},
 				Language: "plain text",
 			},
 		}
+		block.Code.RichText = rts
+
 		r.c.Set(node, block)
 		r.c.AppendBlock(block)
 	}
@@ -303,20 +330,27 @@ func (r *Renderer) renderFencedCodeBlock(w util.BufWriter, source []byte, node a
 			sb.Write(line.Value(source))
 		}
 
+		rts := []notionapi.RichText{{Text: &notionapi.Text{Content: sb.String()}}}
+
+		if sb.Len() > maxRichTextContentLength {
+			rts = []notionapi.RichText{}
+			chunks := chunkText(sb.String())
+			for _, chunk := range chunks {
+				rts = append(rts, notionapi.RichText{Text: &notionapi.Text{Content: chunk}})
+			}
+		}
+
 		block := &notionapi.CodeBlock{
 			BasicBlock: notionapi.BasicBlock{
 				Object: notionapi.ObjectTypeBlock,
 				Type:   notionapi.BlockTypeCode,
 			},
 			Code: notionapi.Code{
-				RichText: []notionapi.RichText{
-					{
-						Text: &notionapi.Text{Content: sb.String()},
-					},
-				},
 				Language: supportedLanguageOrPlainText(string(n.Language(source))),
 			},
 		}
+		block.Code.RichText = rts
+
 		r.c.Set(node, block)
 		r.c.AppendBlock(block)
 	}
@@ -443,6 +477,7 @@ func (r *Renderer) renderCodeSpan(w util.BufWriter, source []byte, node ast.Node
 			segment := c.(*ast.Text).Segment
 			txt = txt + string(segment.Value(source))
 		}
+
 		r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: txt}, Annotations: &notionapi.Annotations{Code: true}})
 		return ast.WalkSkipChildren, nil
 	}
@@ -707,4 +742,27 @@ func IsDangerousURL(url []byte) bool {
 	}
 	return hasPrefix(url, bJs) || hasPrefix(url, bVb) ||
 		hasPrefix(url, bFile) || hasPrefix(url, bData)
+}
+
+func chunkText(txt string) []string {
+	runes := []rune(txt)
+	chunks := []string{}
+	limit := maxRichTextContentLength - 1
+
+	var sb strings.Builder
+	for i, r := range runes {
+		sb.WriteRune(r)
+		if i%limit == 0 && i != 0 {
+			chunks = append(chunks, sb.String())
+			sb.Reset()
+		}
+	}
+
+	// If the last rune index is exactly maxRichTextContentLength, it's been appended
+	// already, but if otherwise, we need to do it manually.
+	if len(runes)%limit != 0 {
+		chunks = append(chunks, sb.String())
+	}
+
+	return chunks
 }
