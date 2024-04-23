@@ -50,6 +50,10 @@ func (c *Cursor) RichText() *notionapi.RichText {
 		return &block.NumberedListItem.RichText[len(block.NumberedListItem.RichText)-1]
 	case *notionapi.Heading1Block:
 		return &block.Heading1.RichText[len(block.Heading1.RichText)-1]
+	case *notionapi.Heading2Block:
+		return &block.Heading2.RichText[len(block.Heading2.RichText)-1]
+	case *notionapi.Heading3Block:
+		return &block.Heading3.RichText[len(block.Heading3.RichText)-1]
 	case *notionapi.QuoteBlock:
 		return &block.Quote.RichText[len(block.Quote.RichText)-1]
 	default:
@@ -85,6 +89,10 @@ func (c *Cursor) AppendRichText(rt *notionapi.RichText) {
 		block.NumberedListItem.RichText = append(block.NumberedListItem.RichText, rts...)
 	case *notionapi.Heading1Block:
 		block.Heading1.RichText = append(block.Heading1.RichText, rts...)
+	case *notionapi.Heading2Block:
+		block.Heading2.RichText = append(block.Heading2.RichText, rts...)
+	case *notionapi.Heading3Block:
+		block.Heading3.RichText = append(block.Heading3.RichText, rts...)
 	case *notionapi.QuoteBlock:
 		block.Quote.RichText = append(block.Quote.RichText, rts...)
 	default:
@@ -101,7 +109,6 @@ func (c *Cursor) AppendBlock(b notionapi.Block, things ...string) {
 	} else {
 		switch block := c.Block().(type) {
 		case *notionapi.ParagraphBlock:
-			println("appending block to paragraph")
 			block.Paragraph.Children = append(block.Paragraph.Children, b)
 		case *notionapi.BulletedListItemBlock:
 			block.BulletedListItem.Children = append(block.BulletedListItem.Children, b)
@@ -109,6 +116,10 @@ func (c *Cursor) AppendBlock(b notionapi.Block, things ...string) {
 			block.NumberedListItem.Children = append(block.NumberedListItem.Children, b)
 		case *notionapi.Heading1Block:
 			block.Heading1.Children = append(block.Heading1.Children, b)
+		case *notionapi.Heading2Block:
+			block.Heading2.Children = append(block.Heading2.Children, b)
+		case *notionapi.Heading3Block:
+			block.Heading3.Children = append(block.Heading3.Children, b)
 		case *notionapi.QuoteBlock:
 			block.Quote.Children = append(block.Quote.Children, b)
 		default:
@@ -182,7 +193,6 @@ func (r *Renderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 }
 
 func (r *Renderer) renderDocument(_ util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("rendering document...", string(node.Text(source)))
 	if entering {
 		r.c = &Cursor{
 			rootBlocks: []notionapi.Block{},
@@ -238,17 +248,54 @@ func (r *Renderer) writeBlocks() error {
 }
 
 func (r *Renderer) renderHeading(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("rendering heading...", entering, string(node.Text(source)))
 	if entering {
-		block := &notionapi.Heading1Block{
-			BasicBlock: notionapi.BasicBlock{
-				Object: notionapi.ObjectTypeBlock,
-				Type:   notionapi.BlockTypeHeading1,
-			},
-			Heading1: notionapi.Heading{
-				RichText: []notionapi.RichText{},
-			},
+		n := node.(*ast.Heading)
+		var block notionapi.Block
+
+		switch n.Level {
+		case 1:
+			block = &notionapi.Heading1Block{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectTypeBlock,
+					Type:   notionapi.BlockTypeHeading1,
+				},
+				Heading1: notionapi.Heading{
+					RichText: []notionapi.RichText{},
+				},
+			}
+		case 2:
+			block = &notionapi.Heading2Block{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectTypeBlock,
+					Type:   notionapi.BlockTypeHeading2,
+				},
+				Heading2: notionapi.Heading{
+					RichText: []notionapi.RichText{},
+				},
+			}
+		case 3:
+			block = &notionapi.Heading3Block{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectTypeBlock,
+					Type:   notionapi.BlockTypeHeading3,
+				},
+				Heading3: notionapi.Heading{
+					RichText: []notionapi.RichText{},
+				},
+			}
+		default:
+			// TODO could we use bold or something else to mimick that level?
+			block = &notionapi.Heading3Block{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectTypeBlock,
+					Type:   notionapi.BlockTypeHeading3,
+				},
+				Heading3: notionapi.Heading{
+					RichText: []notionapi.RichText{},
+				},
+			}
 		}
+
 		r.c.Set(node, block)
 		r.c.Descend(node)
 		r.c.AppendBlock(block)
@@ -259,8 +306,6 @@ func (r *Renderer) renderHeading(w util.BufWriter, source []byte, node ast.Node,
 }
 
 func (r *Renderer) renderBlockquote(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("rendering blockquote...", entering, string(node.Text(source)))
-
 	if entering {
 		block := &notionapi.QuoteBlock{
 			BasicBlock: notionapi.BasicBlock{
@@ -282,8 +327,6 @@ func (r *Renderer) renderBlockquote(w util.BufWriter, source []byte, node ast.No
 }
 
 func (r *Renderer) renderCodeBlock(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("rendering codeblock...", entering, string(node.Text(source)))
-
 	if entering {
 		var sb strings.Builder
 		for i := 0; i < node.Lines().Len(); i++ {
@@ -320,8 +363,6 @@ func (r *Renderer) renderCodeBlock(w util.BufWriter, source []byte, node ast.Nod
 }
 
 func (r *Renderer) renderFencedCodeBlock(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("rendering fendecdcodeblock...", entering, string(node.Text(source)))
-
 	n := node.(*ast.FencedCodeBlock)
 	if entering {
 		var sb strings.Builder
@@ -362,12 +403,10 @@ func (r *Renderer) renderHTMLBlock(w util.BufWriter, source []byte, node ast.Nod
 }
 
 func (r *Renderer) renderList(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("renderlist", entering)
 	return ast.WalkContinue, nil
 }
 
 func (r *Renderer) renderListItem(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("renderlistitem", entering)
 	n := node.Parent().(*ast.List)
 	if entering {
 		var block notionapi.Block
@@ -407,7 +446,6 @@ func (r *Renderer) renderListItem(w util.BufWriter, source []byte, node ast.Node
 }
 
 func (r *Renderer) renderParagraph(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("rendering paragraph...", string(node.Text(source)))
 	// Markdown AST has paragraphs inside blockquotes, but Notion doesn't, so instead, we just pass through.
 	if node.Parent().Kind() == ast.KindBlockquote {
 		return ast.WalkContinue, nil
@@ -469,8 +507,6 @@ func (r *Renderer) renderAutoLink(w util.BufWriter, source []byte, node ast.Node
 }
 
 func (r *Renderer) renderCodeSpan(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("rendering codespan...", entering, string(node.Text(source)))
-
 	if entering {
 		var txt string
 		for c := node.FirstChild(); c != nil; c = c.NextSibling() {
@@ -486,7 +522,6 @@ func (r *Renderer) renderCodeSpan(w util.BufWriter, source []byte, node ast.Node
 }
 
 func (r *Renderer) renderEmphasis(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("rendering emphasis...", entering, string(node.Text(source)))
 	n := node.(*ast.Emphasis)
 
 	if !entering {
@@ -572,7 +607,6 @@ func parseLinkAndAnchor(link string) (string, string, error) {
 }
 
 func (r *Renderer) renderRawHTML(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("rendering raw html...", entering, string(node.Text(source)))
 	// Notion doesn't support this, so we just create a code block instead.
 
 	if entering {
@@ -594,20 +628,16 @@ func (r *Renderer) renderText(w util.BufWriter, source []byte, node ast.Node, en
 	n := node.(*ast.Text)
 	segment := n.Segment
 
-	println("rendering text", entering, string(segment.Value(source)))
 	if !entering {
 		return ast.WalkContinue, nil
 	}
 
 	r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: string(segment.Value(source))}})
 
-	println("parent", n.Parent().Kind().String(), "kind", n.Kind().String(), "text", string(segment.Value(source)))
-
 	return ast.WalkContinue, nil
 }
 
 func (r *Renderer) renderString(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	println("rendering string...", string(node.Text(source)))
 	return ast.WalkContinue, nil
 }
 
