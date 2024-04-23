@@ -53,6 +53,16 @@ func NewRepo(path string, ref string) (*Repo, error) {
 	}
 
 	err := filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
+		if filepath.Base(p) == ".git" {
+			return filepath.SkipDir
+		}
+		if filepath.Base(p) == ".github" {
+			return filepath.SkipDir
+		}
+		if !info.IsDir() && filepath.Ext(p) != ".md" {
+			return nil
+		}
+
 		repo.Add(info.IsDir(), strings.TrimPrefix(p, path))
 		return nil
 	})

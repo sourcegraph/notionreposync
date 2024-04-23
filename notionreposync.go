@@ -25,6 +25,11 @@ func Import(ctx context.Context, client *notionapi.Client, repo *repository.Repo
 
 	opts = append(opts, WithContext(ctx))
 	err := repo.Walk(func(d *repository.Document) error {
+		// if d.Path != "index.md" && d.Path != "ref/ol.md" {
+		// 	return nil
+		// }
+		println("🦀", "rendering", d.Path)
+
 		r := NewRenderer(
 			repo,
 			client,

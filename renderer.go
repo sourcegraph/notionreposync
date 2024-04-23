@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"regexp"
+
 	"github.com/jomei/notionapi"
 	"github.com/sourcegraph/notionreposync/repository"
 	"github.com/yuin/goldmark/ast"
@@ -181,15 +183,35 @@ func (r *Renderer) renderDocument(_ util.BufWriter, source []byte, node ast.Node
 //
 // See WithoutAPI() for more information about the second case.
 func (r *Renderer) writeBlocks() error {
-	if r.Config.testBlocks == nil {
+	if r.Config.testBlocks != nil {
+		*r.Config.testBlocks = r.c.rootBlocks
+		return nil
+	}
+
+	// If we have less than 100 blocks, we can just append them all at once.
+	if len(r.c.rootBlocks) < 100 {
 		_, err := r.client.Block.AppendChildren(r.Context, notionapi.BlockID(r.pageID), &notionapi.AppendBlockChildrenRequest{
 			Children: r.c.rootBlocks,
 		})
 		return err
-	} else {
-		*r.Config.testBlocks = r.c.rootBlocks
-		return nil
 	}
+
+	acc := []notionapi.Block{}
+	for _, block := range r.c.rootBlocks {
+		if len(acc) < 99 {
+			acc = append(acc, block)
+		} else {
+			_, err := r.client.Block.AppendChildren(r.Context, notionapi.BlockID(r.pageID), &notionapi.AppendBlockChildrenRequest{
+				Children: append(acc, block),
+			})
+			if err != nil {
+				return err
+			}
+			acc = []notionapi.Block{}
+		}
+	}
+
+	return nil
 }
 
 func (r *Renderer) renderHeading(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -348,8 +370,12 @@ func (r *Renderer) renderListItem(w util.BufWriter, source []byte, node ast.Node
 
 func (r *Renderer) renderParagraph(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	println("rendering paragraph...", string(node.Text(source)))
-	// Markdown AST has paragraphs inside blockquotes, but it is not supported by Notion, so instead, we just pass through.
+	// Markdown AST has paragraphs inside blockquotes, but Notion doesn't, so instead, we just pass through.
 	if node.Parent().Kind() == ast.KindBlockquote {
+		return ast.WalkContinue, nil
+	}
+	// Markdown AST has paragraphs inside list items, but Notion doesn't, so instead, we just pass through.
+	if node.Parent().Kind() == ast.KindListItem {
 		return ast.WalkContinue, nil
 	}
 
@@ -443,6 +469,8 @@ func (r *Renderer) renderImage(w util.BufWriter, source []byte, node ast.Node, e
 	return ast.WalkContinue, nil
 }
 
+var anchorRe = regexp.MustCompile(`([^#]*)#(.*)?`)
+
 func (r *Renderer) renderLink(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	n := node.(*ast.Link)
 	if entering {
@@ -457,20 +485,9 @@ func (r *Renderer) renderLink(w util.BufWriter, source []byte, node ast.Node, en
 			linkText = dest
 		}
 
-		// If it's not an external link, we need to grab the internal page id.
-		if !strings.HasPrefix(dest, "http") {
-			var d *repository.Document
-			if strings.HasPrefix(dest, "/") {
-				d = r.repo.FindDocument(dest)
-			} else {
-				d = r.repo.FindDocument(filepath.Join(r.basepath, dest))
-			}
-
-			if d == nil {
-				return ast.WalkStop, fmt.Errorf("page with path %q not found", dest)
-			}
-
-			dest = fmt.Sprintf("/%s", strings.ReplaceAll(string(d.ID), "-", ""))
+		dest, err := r.resolveLink(dest)
+		if err != nil {
+			return ast.WalkStop, err
 		}
 
 		r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: linkText, Link: &notionapi.Link{Url: dest}}})
@@ -478,6 +495,41 @@ func (r *Renderer) renderLink(w util.BufWriter, source []byte, node ast.Node, en
 	}
 
 	return ast.WalkContinue, nil
+}
+
+func (r *Renderer) resolveLink(link string) (string, error) {
+	// If this is an external link, we just pass through.
+	if strings.HasPrefix(link, "http") {
+		return link, nil
+	}
+
+	if filepath.Ext(link) != ".md" {
+		// https://sourcegraph.com/github.com/sourcegraph/sourcegraph/-/blob/cmd/worker/main.go
+		return fmt.Sprintf("https://sourcegraph.com/%s/-/blob/%s", r.repo.Reference, filepath.Clean(link)), nil
+	}
+
+	link, _, err := parseLinkAndAnchor(link)
+	if err != nil {
+		return "", err
+	}
+
+	if link == "" {
+		return fmt.Sprintf("/%s", strings.ReplaceAll(string(r.pageID), "-", "")), nil
+	}
+
+	d := r.repo.FindDocument(filepath.Join(r.basepath, link))
+	return fmt.Sprintf("/%s", strings.ReplaceAll(string(d.ID), "-", "")), nil
+}
+
+func parseLinkAndAnchor(link string) (string, string, error) {
+	matches := anchorRe.FindStringSubmatch(link)
+	switch len(matches) {
+	case 0:
+		return link, "", nil
+	case 3:
+		return matches[1], matches[2], nil
+	}
+	return "", "", fmt.Errorf("invalid link: %q", link)
 }
 
 func (r *Renderer) renderRawHTML(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
