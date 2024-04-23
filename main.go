@@ -35,6 +35,15 @@ func main() {
 		panic(err)
 	}
 
+	// pid := "355c672eab85459eb63d9e64c3c332d9"
+	// resp, err := client.Block.GetChildren(context.Background(), notionapi.BlockID(pid), &notionapi.Pagination{})
+	// if err != nil {
+	// 	panic(err)
+	// }
+	//
+	// json.NewEncoder(os.Stdout).Encode(resp.Results)
+	// os.Exit(0)
+
 	repo := repository.Repo{
 		Folder: &repository.Folder{
 			Name:         ".",
@@ -76,12 +85,15 @@ func main() {
 	// 	panic("cannot find pages database")
 	// }
 
-	nd.SyncPagesDB(context.Background(), client, &repo)
+	if err := nd.SyncPagesDB(context.Background(), client, &repo); err != nil {
+		panic(err)
+	}
 	blocks := []notionapi.Block{}
 
 	ren := NewRenderer(
 		&repo,
 		client,
+		filepath.Dir(repo.Folder.ChildFiles[0].Path),
 		repo.Folder.ChildFiles[0].ID,
 		// WithoutAPI(&blocks),
 	)

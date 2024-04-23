@@ -95,6 +95,10 @@ func (d *Repo) Add(isDir bool, path string) {
 
 func (r *Repo) FindDocument(path string) *Document {
 	var doc *Document
+	path = filepath.Clean(path)
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
 	r.Walk(func(d *Document) error {
 		// TODO: might need to implement a way to stop the walk.
 		if doc != nil {

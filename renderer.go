@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/jomei/notionapi"
@@ -15,9 +16,12 @@ import (
 type Renderer struct {
 	Config
 
-	repo   *repository.Repo
-	client *notionapi.Client
-	pageID notionapi.PageID
+	// basepath is the path of the current file we're rendering, for the
+	// sole purpose of handling relative links.
+	basepath string
+	repo     *repository.Repo
+	client   *notionapi.Client
+	pageID   notionapi.PageID
 
 	c *Cursor
 }
@@ -114,12 +118,13 @@ func (c *Cursor) Ascend() {
 	}
 }
 
-func NewRenderer(repo *repository.Repo, client *notionapi.Client, pageID notionapi.PageID, opts ...Option) renderer.NodeRenderer {
+func NewRenderer(repo *repository.Repo, client *notionapi.Client, basepath string, pageID notionapi.PageID, opts ...Option) renderer.NodeRenderer {
 	r := &Renderer{
-		repo:   repo,
-		client: client,
-		pageID: pageID,
-		Config: NewConfig(),
+		basepath: basepath,
+		repo:     repo,
+		client:   client,
+		pageID:   pageID,
+		Config:   NewConfig(),
 	}
 
 	for _, opt := range opts {
@@ -446,17 +451,29 @@ func (r *Renderer) renderLink(w util.BufWriter, source []byte, node ast.Node, en
 			return ast.WalkContinue, nil
 		}
 
+		dest := string(n.Destination)
 		linkText := string(node.Text(source))
 		if linkText == "" {
-			linkText = string(n.Destination)
+			linkText = dest
 		}
 
 		// If it's not an external link, we need to grab the internal page id.
-		if !strings.HasPrefix(string(n.Destination), "http") {
-			// r.docRoot.findByPageID(r.pageID)
+		if !strings.HasPrefix(dest, "http") {
+			var d *repository.Document
+			if strings.HasPrefix(dest, "/") {
+				d = r.repo.FindDocument(dest)
+			} else {
+				d = r.repo.FindDocument(filepath.Join(r.basepath, dest))
+			}
+
+			if d == nil {
+				return ast.WalkStop, fmt.Errorf("page with path %q not found", dest)
+			}
+
+			dest = fmt.Sprintf("/%s", strings.ReplaceAll(string(d.ID), "-", ""))
 		}
 
-		r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: linkText, Link: &notionapi.Link{Url: string(n.Destination)}}})
+		r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: linkText, Link: &notionapi.Link{Url: dest}}})
 		return ast.WalkSkipChildren, nil
 	}
 
