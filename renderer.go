@@ -182,6 +182,9 @@ func (r *Renderer) renderDocument(_ util.BufWriter, source []byte, node ast.Node
 // configured to not use the API, simply pass back the produced blocks to the caller.
 //
 // See WithoutAPI() for more information about the second case.
+//
+// Implementation: see https://developers.notion.com/reference/patch-block-children, we cannot append more
+// than 100 blocks at a time, so we need to split the blocks into chunks of 100.
 func (r *Renderer) writeBlocks() error {
 	if r.Config.testBlocks != nil {
 		*r.Config.testBlocks = r.c.rootBlocks
@@ -199,6 +202,7 @@ func (r *Renderer) writeBlocks() error {
 	acc := []notionapi.Block{}
 	for _, block := range r.c.rootBlocks {
 		if len(acc) < 99 {
+			// 99 because otherwise, we'll have one too many block when flushing.
 			acc = append(acc, block)
 		} else {
 			_, err := r.client.Block.AppendChildren(r.Context, notionapi.BlockID(r.pageID), &notionapi.AppendBlockChildrenRequest{
