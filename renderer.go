@@ -579,7 +579,7 @@ func (r *Renderer) resolveLink(link string) (string, error) {
 
 	if filepath.Ext(link) != ".md" {
 		// https://sourcegraph.com/github.com/sourcegraph/sourcegraph/-/blob/cmd/worker/main.go
-		return fmt.Sprintf("https://sourcegraph.com/%s/-/blob/%s", r.repo.Reference, filepath.Clean(link)), nil
+		return fmt.Sprintf("https://sourcegraph.com/%s/-/blob/%s", r.repo.GitHub, filepath.Clean(link)), nil
 	}
 
 	link, _, err := parseLinkAndAnchor(link)

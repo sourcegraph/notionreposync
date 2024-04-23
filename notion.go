@@ -83,6 +83,7 @@ func (n *NotionDoc) WriteMetadata(ctx context.Context, c *notionapi.Client) erro
 
 func (n *NotionDoc) CreatePagesDB(ctx context.Context, c *notionapi.Client) (notionapi.DatabaseID, error) {
 	db, err := c.Database.Create(ctx, &notionapi.DatabaseCreateRequest{
+		IsInline: true,
 		Parent: notionapi.Parent{
 			PageID: n.PageID,
 		},

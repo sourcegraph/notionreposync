@@ -34,9 +34,9 @@ type Folder struct {
 type Repo struct {
 	// LocalPath is the path to the root of the repository, on the local file system.
 	LocalPath string
-	// Reference is the unique identifier for this repo. It enables to identify all imported pages
+	// GitHub is the unique identifier for this repo. It enables to identify all imported pages
 	// as belonging to the same repo.
-	Reference string
+	GitHub string
 	// Folders are a list of folders containing other pages.
 	Folder *Folder
 }
@@ -44,6 +44,7 @@ type Repo struct {
 func NewRepo(path string, ref string) (*Repo, error) {
 	repo := &Repo{
 		LocalPath: path,
+		GitHub:    ref,
 		Folder: &Folder{
 			Name:         ".",
 			Path:         "./",
