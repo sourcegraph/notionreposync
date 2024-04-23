@@ -81,8 +81,8 @@ func (n *NotionDoc) WriteMetadata(ctx context.Context, c *notionapi.Client) erro
 	return err
 }
 
-func (n *NotionDoc) CreatePagesDB(ctx context.Context, c *notionapi.Client) error {
-	_, err := c.Database.Create(ctx, &notionapi.DatabaseCreateRequest{
+func (n *NotionDoc) CreatePagesDB(ctx context.Context, c *notionapi.Client) (notionapi.DatabaseID, error) {
+	db, err := c.Database.Create(ctx, &notionapi.DatabaseCreateRequest{
 		Parent: notionapi.Parent{
 			PageID: n.PageID,
 		},
@@ -94,7 +94,11 @@ func (n *NotionDoc) CreatePagesDB(ctx context.Context, c *notionapi.Client) erro
 		},
 	})
 
-	return err
+	if err != nil {
+		return "", err
+	}
+
+	return notionapi.DatabaseID(db.ID), nil
 }
 
 func (n *NotionDoc) FindPagesDB(ctx context.Context, c *notionapi.Client) (notionapi.DatabaseID, error) {
@@ -117,9 +121,16 @@ func (n *NotionDoc) FindPagesDB(ctx context.Context, c *notionapi.Client) (notio
 // SyncPagesDB fills the notion page IDs in the pages root with the IDs of their counterpart on Notion.
 // If a page is missing, it will be created on the fly.
 func (n *NotionDoc) SyncPagesDB(ctx context.Context, c *notionapi.Client, repo *repository.Repo) error {
-	dbID, err := n.FindPagesDB(context.Background(), c)
+	dbID, err := n.FindPagesDB(ctx, c)
 	if err != nil {
 		return err
+	}
+	if dbID == "" {
+		var err error
+		dbID, err = n.CreatePagesDB(ctx, c)
+		if err != nil {
+			return err
+		}
 	}
 
 	repo.Walk(func(p *repository.Document) error {

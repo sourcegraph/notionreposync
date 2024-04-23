@@ -32,6 +32,8 @@ type Folder struct {
 // Repo represents a root of a collection of importable markdown documents in the repository.
 // It's basically a common tree structure, starting with a root Folder.
 type Repo struct {
+	// LocalPath is the path to the root of the repository, on the local file system.
+	LocalPath string
 	// Reference is the unique identifier for this repo. It enables to identify all imported pages
 	// as belonging to the same repo.
 	Reference string
@@ -41,6 +43,7 @@ type Repo struct {
 
 func NewRepo(path string, ref string) (*Repo, error) {
 	repo := &Repo{
+		LocalPath: path,
 		Folder: &Folder{
 			Name:         ".",
 			Path:         "./",
