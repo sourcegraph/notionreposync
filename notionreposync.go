@@ -15,6 +15,8 @@ import (
 	"github.com/yuin/goldmark/util"
 )
 
+// Import turns a repository containing markdown files into a structure of Notion pages containing
+// the converted content.
 func Import(ctx context.Context, client *notionapi.Client, repo *repository.Repo, nd *NotionDoc, opts ...Option) error {
 	// Ensure the correct page structure exists on Notion, or create it.
 	if err := nd.SyncPagesDB(context.Background(), client, repo); err != nil {

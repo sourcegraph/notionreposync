@@ -133,7 +133,7 @@ func (n *NotionDoc) SyncPagesDB(ctx context.Context, c *notionapi.Client, repo *
 		}
 	}
 
-	repo.Walk(func(p *repository.Document) error {
+	err = repo.Walk(func(p *repository.Document) error {
 		page, err := n.findPageInDB(ctx, c, dbID, p.Path)
 		if err != nil {
 			if !errors.Is(err, ErrPageNotFoundInDB) {
@@ -142,6 +142,11 @@ func (n *NotionDoc) SyncPagesDB(ctx context.Context, c *notionapi.Client, repo *
 			page, err = c.Page.Create(context.Background(), &notionapi.PageCreateRequest{
 				Parent: notionapi.Parent{DatabaseID: dbID},
 				Properties: map[string]notionapi.Property{
+					"Title": notionapi.TitleProperty{
+						Title: []notionapi.RichText{
+							{Text: &notionapi.Text{Content: p.Path}},
+						},
+					},
 					"_path": notionapi.RichTextProperty{
 						RichText: []notionapi.RichText{
 							{Text: &notionapi.Text{Content: p.Path}},
@@ -156,7 +161,7 @@ func (n *NotionDoc) SyncPagesDB(ctx context.Context, c *notionapi.Client, repo *
 		p.ID = notionapi.PageID(page.ID)
 		return nil
 	})
-	return nil
+	return err
 }
 
 var ErrPageNotFoundInDB = errors.New("not found")
