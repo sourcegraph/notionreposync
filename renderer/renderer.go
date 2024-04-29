@@ -1,162 +1,41 @@
-package main
+package renderer
 
 import (
 	"bytes"
-	"fmt"
-	"path/filepath"
+	"context"
 	"strings"
 
-	"regexp"
-
 	"github.com/jomei/notionapi"
-	"github.com/sourcegraph/notionreposync/repository"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/util"
 )
 
 // See https://developers.notion.com/reference/patch-block-children
-const maxBlocksPerUpdate = 100
+const MaxBlocksPerUpdate = 100
 
 // See https://developers.notion.com/reference/request-limits#limits-for-property-values
-const maxRichTextContentLength = 2000
+const MaxRichTextContentLength = 2000
+
+type BlockUpdater interface {
+	// AddChildren should add the given children to the desired parent block.
+	// It is called respecting MaxBlocksPerUpdate and MaxRichTextContentLength.
+	AddChildren(ctx context.Context, children []notionapi.Block) error
+}
 
 type Renderer struct {
 	Config
 
-	// basepath is the path of the current file we're rendering, for the
-	// sole purpose of handling relative links.
-	basepath string
-	repo     *repository.Repo
-	client   *notionapi.Client
-	pageID   notionapi.PageID
+	block BlockUpdater
 
 	c *Cursor
 }
 
-type Cursor struct {
-	rootBlocks []notionapi.Block
-	m          map[ast.Node]notionapi.Block
-	cur        ast.Node
-}
+var _ renderer.NodeRenderer = (*Renderer)(nil)
 
-func (c *Cursor) RichText() *notionapi.RichText {
-	switch block := c.m[c.cur].(type) {
-	case *notionapi.ParagraphBlock:
-		return &block.Paragraph.RichText[len(block.Paragraph.RichText)-1]
-	case *notionapi.BulletedListItemBlock:
-		return &block.BulletedListItem.RichText[len(block.BulletedListItem.RichText)-1]
-	case *notionapi.NumberedListItemBlock:
-		return &block.NumberedListItem.RichText[len(block.NumberedListItem.RichText)-1]
-	case *notionapi.Heading1Block:
-		return &block.Heading1.RichText[len(block.Heading1.RichText)-1]
-	case *notionapi.Heading2Block:
-		return &block.Heading2.RichText[len(block.Heading2.RichText)-1]
-	case *notionapi.Heading3Block:
-		return &block.Heading3.RichText[len(block.Heading3.RichText)-1]
-	case *notionapi.QuoteBlock:
-		return &block.Quote.RichText[len(block.Quote.RichText)-1]
-	default:
-		fmt.Printf("unknown block type: %T\n", block)
-	}
-	return nil
-}
-
-func (c *Cursor) Block() notionapi.Block {
-	return c.m[c.cur]
-}
-
-func (c *Cursor) AppendRichText(rt *notionapi.RichText) {
-	rts := []notionapi.RichText{*rt}
-
-	// See https://developers.notion.com/reference/request-limits#limits-for-property-values
-	if len(rt.Text.Content) > maxRichTextContentLength {
-		rts = []notionapi.RichText{}
-		chunks := chunkText(rt.Text.Content)
-		for _, chunk := range chunks {
-			chunkRT := *rt
-			chunkRT.Text.Content = chunk
-			rts = append(rts, chunkRT)
-		}
-	}
-
-	switch block := c.m[c.cur].(type) {
-	case *notionapi.ParagraphBlock:
-		block.Paragraph.RichText = append(block.Paragraph.RichText, rts...)
-	case *notionapi.BulletedListItemBlock:
-		block.BulletedListItem.RichText = append(block.BulletedListItem.RichText, rts...)
-	case *notionapi.NumberedListItemBlock:
-		block.NumberedListItem.RichText = append(block.NumberedListItem.RichText, rts...)
-	case *notionapi.Heading1Block:
-		block.Heading1.RichText = append(block.Heading1.RichText, rts...)
-	case *notionapi.Heading2Block:
-		block.Heading2.RichText = append(block.Heading2.RichText, rts...)
-	case *notionapi.Heading3Block:
-		block.Heading3.RichText = append(block.Heading3.RichText, rts...)
-	case *notionapi.QuoteBlock:
-		block.Quote.RichText = append(block.Quote.RichText, rts...)
-	default:
-		fmt.Printf("unknown block type: %T\n", block)
-		panic("here")
-	}
-}
-
-func (c *Cursor) AppendBlock(b notionapi.Block, things ...string) {
-	if c.cur.Kind() == ast.KindDocument {
-		c.rootBlocks = append(c.rootBlocks, b)
-	} else if c.cur.Parent().Kind() == ast.KindDocument {
-		c.rootBlocks = append(c.rootBlocks, b)
-	} else {
-		switch block := c.Block().(type) {
-		case *notionapi.ParagraphBlock:
-			block.Paragraph.Children = append(block.Paragraph.Children, b)
-		case *notionapi.BulletedListItemBlock:
-			block.BulletedListItem.Children = append(block.BulletedListItem.Children, b)
-		case *notionapi.NumberedListItemBlock:
-			block.NumberedListItem.Children = append(block.NumberedListItem.Children, b)
-		case *notionapi.Heading1Block:
-			block.Heading1.Children = append(block.Heading1.Children, b)
-		case *notionapi.Heading2Block:
-			block.Heading2.Children = append(block.Heading2.Children, b)
-		case *notionapi.Heading3Block:
-			block.Heading3.Children = append(block.Heading3.Children, b)
-		case *notionapi.QuoteBlock:
-			block.Quote.Children = append(block.Quote.Children, b)
-		default:
-			println("unknown block type: %T\n", block)
-			panic("here")
-		}
-	}
-}
-
-func (c *Cursor) Set(node ast.Node, block notionapi.Block) {
-	c.m[node] = block
-}
-
-func (c *Cursor) Descend(node ast.Node) {
-	c.cur = node
-}
-
-func (c *Cursor) Ascend() {
-	for {
-		if c.cur.Parent() != nil {
-			c.cur = c.cur.Parent()
-			if c.m[c.cur] != nil {
-				return
-			}
-		} else {
-			return
-		}
-	}
-}
-
-func NewRenderer(repo *repository.Repo, client *notionapi.Client, basepath string, pageID notionapi.PageID, opts ...Option) renderer.NodeRenderer {
+func NewRenderer(ctx context.Context, blocks BlockUpdater, opts ...Option) *Renderer {
 	r := &Renderer{
-		basepath: basepath,
-		repo:     repo,
-		client:   client,
-		pageID:   pageID,
-		Config:   NewConfig(),
+		Config: NewConfig(ctx),
 	}
 
 	for _, opt := range opts {
@@ -207,37 +86,23 @@ func (r *Renderer) renderDocument(_ util.BufWriter, source []byte, node ast.Node
 	return ast.WalkContinue, nil
 }
 
-// writeBlocks performs API calls to the notion API to append the blocks to the page, or if the renderer was
-// configured to not use the API, simply pass back the produced blocks to the caller.
-//
-// See WithoutAPI() for more information about the second case.
+// writeBlocks performs API calls to the notion API to append the blocks to the page.
 //
 // Implementation: see https://developers.notion.com/reference/patch-block-children, we cannot append more
 // than 100 blocks at a time, so we need to split the blocks into chunks of 100.
 func (r *Renderer) writeBlocks() error {
-	if r.Config.testBlocks != nil {
-		*r.Config.testBlocks = r.c.rootBlocks
-		return nil
-	}
-
 	// If we have less than 100 blocks, we can just append them all at once.
 	if len(r.c.rootBlocks) < 100 {
-		_, err := r.client.Block.AppendChildren(r.Context, notionapi.BlockID(r.pageID), &notionapi.AppendBlockChildrenRequest{
-			Children: r.c.rootBlocks,
-		})
-		return err
+		return r.block.AddChildren(r.ctx, r.c.rootBlocks)
 	}
 
 	acc := []notionapi.Block{}
 	for _, block := range r.c.rootBlocks {
-		if len(acc) < maxBlocksPerUpdate-1 {
+		if len(acc) < MaxBlocksPerUpdate-1 {
 			// Minus one because otherwise, we'll have one too many block when flushing.
 			acc = append(acc, block)
 		} else {
-			_, err := r.client.Block.AppendChildren(r.Context, notionapi.BlockID(r.pageID), &notionapi.AppendBlockChildrenRequest{
-				Children: append(acc, block),
-			})
-			if err != nil {
+			if err := r.block.AddChildren(r.ctx, append(acc, block)); err != nil {
 				return err
 			}
 			acc = []notionapi.Block{}
@@ -336,7 +201,7 @@ func (r *Renderer) renderCodeBlock(w util.BufWriter, source []byte, node ast.Nod
 
 		rts := []notionapi.RichText{{Text: &notionapi.Text{Content: sb.String()}}}
 
-		if sb.Len() > maxRichTextContentLength {
+		if sb.Len() > MaxRichTextContentLength {
 			rts = []notionapi.RichText{}
 			chunks := chunkText(sb.String())
 			for _, chunk := range chunks {
@@ -373,7 +238,7 @@ func (r *Renderer) renderFencedCodeBlock(w util.BufWriter, source []byte, node a
 
 		rts := []notionapi.RichText{{Text: &notionapi.Text{Content: sb.String()}}}
 
-		if sb.Len() > maxRichTextContentLength {
+		if sb.Len() > MaxRichTextContentLength {
 			rts = []notionapi.RichText{}
 			chunks := chunkText(sb.String())
 			for _, chunk := range chunks {
@@ -543,8 +408,6 @@ func (r *Renderer) renderImage(w util.BufWriter, source []byte, node ast.Node, e
 	return ast.WalkContinue, nil
 }
 
-var anchorRe = regexp.MustCompile(`([^#]*)#(.*)?`)
-
 func (r *Renderer) renderLink(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	n := node.(*ast.Link)
 	if entering {
@@ -559,7 +422,7 @@ func (r *Renderer) renderLink(w util.BufWriter, source []byte, node ast.Node, en
 			linkText = dest
 		}
 
-		dest, err := r.resolveLink(dest)
+		dest, err := r.links.ResolveLink(dest)
 		if err != nil {
 			return ast.WalkStop, err
 		}
@@ -569,41 +432,6 @@ func (r *Renderer) renderLink(w util.BufWriter, source []byte, node ast.Node, en
 	}
 
 	return ast.WalkContinue, nil
-}
-
-func (r *Renderer) resolveLink(link string) (string, error) {
-	// If this is an external link, we just pass through.
-	if strings.HasPrefix(link, "http") {
-		return link, nil
-	}
-
-	if filepath.Ext(link) != ".md" {
-		// https://sourcegraph.com/github.com/sourcegraph/sourcegraph/-/blob/cmd/worker/main.go
-		return fmt.Sprintf("https://sourcegraph.com/%s/-/blob/%s", r.repo.GitHub, filepath.Clean(link)), nil
-	}
-
-	link, _, err := parseLinkAndAnchor(link)
-	if err != nil {
-		return "", err
-	}
-
-	if link == "" {
-		return fmt.Sprintf("/%s", strings.ReplaceAll(string(r.pageID), "-", "")), nil
-	}
-
-	d := r.repo.FindDocument(filepath.Join(r.basepath, link))
-	return fmt.Sprintf("/%s", strings.ReplaceAll(string(d.ID), "-", "")), nil
-}
-
-func parseLinkAndAnchor(link string) (string, string, error) {
-	matches := anchorRe.FindStringSubmatch(link)
-	switch len(matches) {
-	case 0:
-		return link, "", nil
-	case 3:
-		return matches[1], matches[2], nil
-	}
-	return "", "", fmt.Errorf("invalid link: %q", link)
 }
 
 func (r *Renderer) renderRawHTML(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -777,7 +605,7 @@ func IsDangerousURL(url []byte) bool {
 func chunkText(txt string) []string {
 	runes := []rune(txt)
 	chunks := []string{}
-	limit := maxRichTextContentLength - 1
+	limit := MaxRichTextContentLength - 1
 
 	var sb strings.Builder
 	for i, r := range runes {
