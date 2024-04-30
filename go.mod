@@ -4,9 +4,9 @@ go 1.21.4
 
 require (
 	github.com/hexops/autogold/v2 v2.2.1
-	github.com/jomei/notionapi v1.12.9
+	github.com/jomei/notionapi v1.13.0
 	github.com/stretchr/testify v1.9.0
-	github.com/yuin/goldmark v1.7.0
+	github.com/yuin/goldmark v1.7.1
 )
 
 require (
