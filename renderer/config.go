@@ -4,51 +4,33 @@ import (
 	"context"
 )
 
-type LinkResolver interface {
-	// ResolveLink accepts a relative link and resolves an appropriate absolute
-	// link to the relevant resource (e.g. another Notion document or a blob view).
-	ResolveLink(link string) (string, error)
-}
-
-type noopLinkResolver struct{}
-
-func (noopLinkResolver) ResolveLink(link string) (string, error) { return link, nil }
-
-// Config represents the configuration of the renderer.
-type Config struct {
+// config represents the configuration of the renderer.
+type config struct {
 	ctx   context.Context
 	links LinkResolver
 }
 
-// NewConfig returns a new default Config.
-func NewConfig(ctx context.Context) Config {
-	return Config{
+// newConfig returns a new default Config, such that all values have a usable
+// default. The provided context should be used for all internal operations.
+func newConfig(ctx context.Context) config {
+	return config{
 		ctx:   ctx,
 		links: noopLinkResolver{},
 	}
 }
 
-type Option interface {
-	SetConfig(*Config)
-}
+// Option applies configuration of the renderer. It is intentionally unexported
+// such that only this package can export Options.
+type Option interface{ setConfig(*config) }
 
-type OptionFunc func(*Config)
+type optionFunc func(*config)
 
-func (o OptionFunc) SetConfig(c *Config) {
-	o(c)
-}
-
-// WithConfig allows to directly set a Config.
-func WithConfig(config *Config) Option {
-	return OptionFunc(func(c *Config) {
-		*c = *config
-	})
-}
+func (o optionFunc) setConfig(c *config) { o(c) }
 
 // WithLinkResolver configures a LinkResolver to use. Otherwise, a default no-op
 // one is used that uses links as-is.
 func WithLinkResolver(links LinkResolver) Option {
-	return OptionFunc(func(c *Config) {
+	return optionFunc(func(c *config) {
 		c.links = links
 	})
 }

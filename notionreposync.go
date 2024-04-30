@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/jomei/notionapi"
 
+	"github.com/sourcegraph/notionreposync/markdown"
 	"github.com/sourcegraph/notionreposync/notion"
 	notionrenderer "github.com/sourcegraph/notionreposync/renderer"
 	"github.com/sourcegraph/notionreposync/repository"
@@ -29,19 +29,18 @@ func Import(ctx context.Context, client *notionapi.Client, repo *repository.Repo
 		println("🦀", "rendering", d.Path)
 
 		notionPageID := string(nd.PageID)
-		r := notionrenderer.NewRenderer(
+		converter := markdown.NewProcessor(
 			ctx,
 			notion.NewBlockUpdater(client, notionPageID),
 			notionrenderer.WithLinkResolver(repository.NewLinkResolver(repo, filepath.Dir(d.Path), notionPageID)),
 		)
 
-		md := notionrenderer.NewMarkdown(r)
 		b, err := os.ReadFile(filepath.Join(repo.LocalPath, d.Path))
 		if err != nil {
 			return fmt.Errorf("failed to read %q: %w", d.Path, err)
 		}
 
-		if err := md.Convert(b, io.Discard); err != nil {
+		if err := converter.ProcessMarkdown(b); err != nil {
 			return fmt.Errorf("failed to convert %q: %w", d.Path, err)
 		}
 		return nil

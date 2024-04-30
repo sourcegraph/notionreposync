@@ -1,0 +1,12 @@
+[]notionapi.Block{&notionapi.QuoteBlock{
+	BasicBlock: notionapi.BasicBlock{
+		Object: notionapi.ObjectType("block"),
+		Type:   notionapi.BlockType("quote"),
+	},
+	Quote: notionapi.Quote{RichText: []notionapi.RichText{
+		{Text: &notionapi.Text{
+			Content: "Foobar is",
+		}},
+		{Text: &notionapi.Text{Content: " glorious"}},
+	}},
+}}

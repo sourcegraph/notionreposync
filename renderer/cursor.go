@@ -7,13 +7,13 @@ import (
 	"github.com/yuin/goldmark/ast"
 )
 
-type Cursor struct {
+type cursor struct {
 	rootBlocks []notionapi.Block
 	m          map[ast.Node]notionapi.Block
 	cur        ast.Node
 }
 
-func (c *Cursor) RichText() *notionapi.RichText {
+func (c *cursor) RichText() *notionapi.RichText {
 	switch block := c.m[c.cur].(type) {
 	case *notionapi.ParagraphBlock:
 		return &block.Paragraph.RichText[len(block.Paragraph.RichText)-1]
@@ -35,11 +35,11 @@ func (c *Cursor) RichText() *notionapi.RichText {
 	return nil
 }
 
-func (c *Cursor) Block() notionapi.Block {
+func (c *cursor) Block() notionapi.Block {
 	return c.m[c.cur]
 }
 
-func (c *Cursor) AppendRichText(rt *notionapi.RichText) {
+func (c *cursor) AppendRichText(rt *notionapi.RichText) {
 	rts := []notionapi.RichText{*rt}
 
 	// See https://developers.notion.com/reference/request-limits#limits-for-property-values
@@ -69,12 +69,11 @@ func (c *Cursor) AppendRichText(rt *notionapi.RichText) {
 	case *notionapi.QuoteBlock:
 		block.Quote.RichText = append(block.Quote.RichText, rts...)
 	default:
-		fmt.Printf("unknown block type: %T\n", block)
-		panic("here")
+		panic(fmt.Sprintf("unknown block type: %T\n", block))
 	}
 }
 
-func (c *Cursor) AppendBlock(b notionapi.Block, things ...string) {
+func (c *cursor) AppendBlock(b notionapi.Block, things ...string) {
 	if c.cur.Kind() == ast.KindDocument {
 		c.rootBlocks = append(c.rootBlocks, b)
 	} else if c.cur.Parent().Kind() == ast.KindDocument {
@@ -96,21 +95,20 @@ func (c *Cursor) AppendBlock(b notionapi.Block, things ...string) {
 		case *notionapi.QuoteBlock:
 			block.Quote.Children = append(block.Quote.Children, b)
 		default:
-			println("unknown block type: %T\n", block)
-			panic("here")
+			panic(fmt.Sprintf("unknown block type: %T\n", block))
 		}
 	}
 }
 
-func (c *Cursor) Set(node ast.Node, block notionapi.Block) {
+func (c *cursor) Set(node ast.Node, block notionapi.Block) {
 	c.m[node] = block
 }
 
-func (c *Cursor) Descend(node ast.Node) {
+func (c *cursor) Descend(node ast.Node) {
 	c.cur = node
 }
 
-func (c *Cursor) Ascend() {
+func (c *cursor) Ascend() {
 	for {
 		if c.cur.Parent() != nil {
 			c.cur = c.cur.Parent()

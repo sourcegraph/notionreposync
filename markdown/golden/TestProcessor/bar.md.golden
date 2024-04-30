@@ -1,0 +1,38 @@
+[]notionapi.Block{
+	&notionapi.Heading1Block{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("heading_1"),
+		},
+		Heading1: notionapi.Heading{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{
+				Content: "Bar",
+			}},
+			{Text: &notionapi.Text{Content: " index"}},
+		}},
+	},
+	&notionapi.ParagraphBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("paragraph"),
+		},
+		Paragraph: notionapi.Paragraph{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "But from foo, albeit nothing to do with"}},
+			{Text: &notionapi.Text{Content: " fighting."}},
+		}},
+	},
+	&notionapi.ParagraphBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("paragraph"),
+		},
+		Paragraph: notionapi.Paragraph{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "There is another bar in that street, check it out "}},
+			{Text: &notionapi.Text{
+				Content: "there",
+				Link:    &notionapi.Link{Url: "../bar/index.md"},
+			}},
+			{Text: &notionapi.Text{Content: "."}},
+		}},
+	},
+}
