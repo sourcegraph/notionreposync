@@ -1,0 +1,99 @@
+[]notionapi.Block{
+	&notionapi.BulletedListItemBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("bulleted_list_item"),
+		},
+		BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{
+				Content: "abc",
+			}},
+		}},
+	},
+	&notionapi.BulletedListItemBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("bulleted_list_item"),
+		},
+		BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{{Text: &notionapi.Text{Content: "def"}}}},
+	},
+	&notionapi.BulletedListItemBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("bulleted_list_item"),
+		},
+		BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{{Text: &notionapi.Text{Content: "geh"}}}},
+	},
+	&notionapi.BulletedListItemBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("bulleted_list_item"),
+		},
+		BulletedListItem: notionapi.ListItem{
+			RichText: []notionapi.RichText{{Text: &notionapi.Text{Content: "abc"}}},
+			Children: notionapi.Blocks{
+				&notionapi.BulletedListItemBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("bulleted_list_item"),
+					},
+					BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{{
+						Text: &notionapi.Text{Content: "123"},
+					}}},
+				},
+				&notionapi.BulletedListItemBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("bulleted_list_item"),
+					},
+					BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{{Text: &notionapi.Text{Content: "234"}}}},
+				},
+				&notionapi.BulletedListItemBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("bulleted_list_item"),
+					},
+					BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{{Text: &notionapi.Text{Content: "567"}}}},
+				},
+			},
+		},
+	},
+	&notionapi.BulletedListItemBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("bulleted_list_item"),
+		},
+		BulletedListItem: notionapi.ListItem{
+			RichText: []notionapi.RichText{{Text: &notionapi.Text{Content: "def"}}},
+			Children: notionapi.Blocks{
+				&notionapi.BulletedListItemBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("bulleted_list_item"),
+					},
+					BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{{Text: &notionapi.Text{Content: "123"}}}},
+				},
+				&notionapi.BulletedListItemBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("bulleted_list_item"),
+					},
+					BulletedListItem: notionapi.ListItem{
+						RichText: []notionapi.RichText{{Text: &notionapi.Text{Content: "456"}}},
+						Children: notionapi.Blocks{&notionapi.BulletedListItemBlock{
+							BasicBlock: notionapi.BasicBlock{
+								Object: notionapi.ObjectType("block"),
+								Type:   notionapi.BlockType("bulleted_list_item"),
+							},
+							BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+								{Text: &notionapi.Text{
+									Content: "789",
+								}},
+							}},
+						}},
+					},
+				},
+			},
+		},
+	},
+}

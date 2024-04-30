@@ -1,0 +1,40 @@
+[]notionapi.Block{
+	&notionapi.CodeBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("code"),
+		},
+		Code: notionapi.Code{
+			RichText: []notionapi.RichText{
+				{Text: &notionapi.Text{
+					Content: `var txt string
+for c := node.FirstChild(); c != nil; c = c.NextSibling() {
+    segment := c.(*ast.Text).Segment
+    txt = txt + string(segment.Value(source))
+}
+r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: txt}, Annotations: &notionapi.Annotations{Code: true}})
+return ast.WalkSkipChildren, nil
+`,
+				}},
+			},
+			Language: "plain text",
+		},
+	},
+	&notionapi.CodeBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("code"),
+		},
+		Code: notionapi.Code{
+			RichText: []notionapi.RichText{{Text: &notionapi.Text{Content: `var txt string
+for c := node.FirstChild(); c != nil; c = c.NextSibling() {
+    segment := c.(*ast.Text).Segment
+    txt = txt + string(segment.Value(source))
+}
+r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: txt}, Annotations: &notionapi.Annotations{Code: true}})
+return ast.WalkSkipChildren, nil
+`}}},
+			Language: "go",
+		},
+	},
+}

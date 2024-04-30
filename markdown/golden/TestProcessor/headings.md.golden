@@ -1,0 +1,64 @@
+[]notionapi.Block{
+	&notionapi.Heading1Block{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("heading_1"),
+		},
+		Heading1: notionapi.Heading{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{
+				Content: "headings",
+			}},
+			{Text: &notionapi.Text{Content: " 1"}},
+		}},
+	},
+	&notionapi.Heading2Block{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("heading_2"),
+		},
+		Heading2: notionapi.Heading{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "headings"}},
+			{Text: &notionapi.Text{Content: " 2"}},
+		}},
+	},
+	&notionapi.Heading3Block{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("heading_3"),
+		},
+		Heading3: notionapi.Heading{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "headings"}},
+			{Text: &notionapi.Text{Content: " 3"}},
+		}},
+	},
+	&notionapi.Heading3Block{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("heading_3"),
+		},
+		Heading3: notionapi.Heading{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "headings"}},
+			{Text: &notionapi.Text{Content: " 4"}},
+		}},
+	},
+	&notionapi.Heading3Block{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("heading_3"),
+		},
+		Heading3: notionapi.Heading{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "headings"}},
+			{Text: &notionapi.Text{Content: " 5"}},
+		}},
+	},
+	&notionapi.Heading3Block{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("heading_3"),
+		},
+		Heading3: notionapi.Heading{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "headings"}},
+			{Text: &notionapi.Text{Content: " 6"}},
+		}},
+	},
+}
