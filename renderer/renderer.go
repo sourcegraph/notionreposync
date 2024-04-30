@@ -7,24 +7,31 @@ import (
 
 	"github.com/jomei/notionapi"
 	"github.com/yuin/goldmark/ast"
-	"github.com/yuin/goldmark/renderer"
+	goldmark "github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/util"
 )
 
+// nodeRenderer encapsulates all logic required to convert Markdown content
+// into Notion document blocks by implementing Goldmark's NodeRenderer interface.
+//
+// nodeRenderer MUST remain free of notionreposync's domain-specific logic for
+// external use, and instead focus on converting Markdown to Notion blocks,
+// processing them in config interfaces like LinkResolver and batching converted
+// blocks to BlockUpdater.
 type nodeRenderer struct {
 	conf  config
 	block BlockUpdater
 	c     *cursor
 }
 
-var _ renderer.NodeRenderer = (*nodeRenderer)(nil)
+var _ goldmark.NodeRenderer = (*nodeRenderer)(nil)
 
 // NewNodeRenderer returns a new NodeRenderer that ingests Markdown and applies
 // converted Notion blocks to BlockUpdater.
 //
 // Callers that just want to process Markdown should use markdown.NewProcessor
 // instead.
-func NewNodeRenderer(ctx context.Context, block BlockUpdater, opts ...Option) renderer.NodeRenderer {
+func NewNodeRenderer(ctx context.Context, block BlockUpdater, opts ...Option) goldmark.NodeRenderer {
 	r := &nodeRenderer{
 		conf:  newConfig(ctx),
 		block: block,
@@ -36,7 +43,7 @@ func NewNodeRenderer(ctx context.Context, block BlockUpdater, opts ...Option) re
 	return r
 }
 
-func (r *nodeRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+func (r *nodeRenderer) RegisterFuncs(reg goldmark.NodeRendererFuncRegisterer) {
 	// blocks
 
 	reg.Register(ast.KindDocument, r.renderDocument)

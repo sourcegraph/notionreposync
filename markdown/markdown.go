@@ -15,7 +15,7 @@ import (
 
 type Processor struct{ md goldmark.Markdown }
 
-// NewProcessor returns a new simple Markdown procesosr that can be used to
+// NewProcessor returns a new simple Markdown processor that can be used to
 // process Markdown test, sending the resulting Notion document blocks to the
 // given BlockUpdater.
 func NewProcessor(ctx context.Context, blocks renderer.BlockUpdater, opts ...renderer.Option) Processor {

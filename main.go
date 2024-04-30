@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/jomei/notionapi"
-	"github.com/sourcegraph/notionreposync/repository"
 )
 
 func main() {
@@ -29,7 +28,7 @@ func main() {
 	}
 
 	blocks := []notionapi.Block{}
-	repo, err := repository.NewRepo(repoPath, "sourcegraph/sourcegraph")
+	repo, err := NewRepo(repoPath, "sourcegraph/sourcegraph")
 	if err := Import(context.Background(), client, repo, nd); err != nil {
 		panic(err)
 	}
