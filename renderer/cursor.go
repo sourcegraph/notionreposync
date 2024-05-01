@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/jomei/notionapi"
@@ -30,9 +31,8 @@ func (c *cursor) RichText() *notionapi.RichText {
 	case *notionapi.QuoteBlock:
 		return &block.Quote.RichText[len(block.Quote.RichText)-1]
 	default:
-		fmt.Printf("unknown block type: %T\n", block)
+		panic(errUnknownBlock(block, nil))
 	}
-	return nil
 }
 
 func (c *cursor) Block() notionapi.Block {
@@ -69,11 +69,11 @@ func (c *cursor) AppendRichText(rt *notionapi.RichText) {
 	case *notionapi.QuoteBlock:
 		block.Quote.RichText = append(block.Quote.RichText, rts...)
 	default:
-		panic(fmt.Sprintf("unknown block type: %T\n", block))
+		panic(errUnknownBlock(block, rts))
 	}
 }
 
-func (c *cursor) AppendBlock(b notionapi.Block, things ...string) {
+func (c *cursor) AppendBlock(b notionapi.Block) {
 	if c.cur.Kind() == ast.KindDocument {
 		c.rootBlocks = append(c.rootBlocks, b)
 	} else if c.cur.Parent().Kind() == ast.KindDocument {
@@ -95,7 +95,7 @@ func (c *cursor) AppendBlock(b notionapi.Block, things ...string) {
 		case *notionapi.QuoteBlock:
 			block.Quote.Children = append(block.Quote.Children, b)
 		default:
-			panic(fmt.Sprintf("unknown block type: %T\n", block))
+			panic(errUnknownBlock(block, b))
 		}
 	}
 }
@@ -119,4 +119,9 @@ func (c *cursor) Ascend() {
 			return
 		}
 	}
+}
+
+func errUnknownBlock(block notionapi.Block, data any) error {
+	raw, _ := json.Marshal(data)
+	return fmt.Errorf("unknown block type: %T (%s)", block, string(raw))
 }
