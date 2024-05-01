@@ -233,6 +233,10 @@ func (r *nodeRenderer) renderCodeBlock(w util.BufWriter, source []byte, node ast
 		var sb strings.Builder
 		for i := 0; i < node.Lines().Len(); i++ {
 			line := node.Lines().At(i)
+			lineContents := line.Value(source)
+			if i == node.Lines().Len()-1 { // trim trailing newlines
+				lineContents = bytes.TrimRight(lineContents, "\n")
+			}
 			sb.Write(line.Value(source))
 		}
 
@@ -270,7 +274,11 @@ func (r *nodeRenderer) renderFencedCodeBlock(w util.BufWriter, source []byte, no
 		var sb strings.Builder
 		for i := 0; i < node.Lines().Len(); i++ {
 			line := node.Lines().At(i)
-			sb.Write(line.Value(source))
+			lineContents := line.Value(source)
+			if i == node.Lines().Len()-1 { // trim trailing newlines
+				lineContents = bytes.TrimRight(lineContents, "\n")
+			}
+			sb.Write(lineContents)
 		}
 
 		rts := []notionapi.RichText{{Text: &notionapi.Text{Content: sb.String()}}}
