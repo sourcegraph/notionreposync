@@ -1,0 +1,79 @@
+[]notionapi.Block{
+	&notionapi.Heading1Block{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("heading_1"),
+		},
+		Heading1: notionapi.Heading{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{
+				Content: "MSP Testbed infrastructure",
+			}},
+			{Text: &notionapi.Text{Content: " operations"}},
+		}},
+	},
+	&notionapi.CalloutBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("callout"),
+		},
+		Callout: notionapi.Callout{
+			RichText: []notionapi.RichText{{Text: &notionapi.Text{Content: "Generated from: unknown revision of "}}},
+			Icon: &notionapi.Icon{
+				Type:  notionapi.FileType("emoji"),
+				Emoji: valast.Ptr(notionapi.Emoji("🔔")),
+			},
+		},
+	},
+	&notionapi.ParagraphBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("paragraph"),
+		},
+		Paragraph: notionapi.Paragraph{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "This document describes operational guidance for MSP Testbed"}},
+			{Text: &notionapi.Text{Content: " infrastructure."}},
+			{Text: &notionapi.Text{Content: "This service is operated on the "}},
+			{Text: &notionapi.Text{
+				Content: "Managed Services Platform (MSP)",
+				Link:    &notionapi.Link{Url: "https://sourcegraph.notion.site/712a0389f54c4d3a90d069aa2d979a59"},
+			}},
+			{Text: &notionapi.Text{Content: "."}},
+		}},
+	},
+	&notionapi.CalloutBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("callout"),
+		},
+		Callout: notionapi.Callout{
+			RichText: []notionapi.RichText{
+				{Text: &notionapi.Text{Content: "If this is your first time here, you must follow the "}},
+				{Text: &notionapi.Text{
+					Content: "sourcegraph/managed-services 'Tooling setup' guide",
+					Link:    &notionapi.Link{Url: "https://github.com/sourcegraph/managed-services/blob/main/README.md"},
+				}},
+				{Text: &notionapi.Text{Content: " as well to clone the service definitions repository and set up the prerequisite"}},
+				{Text: &notionapi.Text{Content: " tooling."}},
+			},
+			Icon: &notionapi.Icon{
+				Type:  notionapi.FileType("emoji"),
+				Emoji: valast.Ptr(notionapi.Emoji("⭐")),
+			},
+		},
+	},
+	&notionapi.ParagraphBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("paragraph"),
+		},
+		Paragraph: notionapi.Paragraph{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "If you need assistance with MSP infrastructure, reach out to the "}},
+			{Text: &notionapi.Text{
+				Content: "Core Services",
+				Link:    &notionapi.Link{Url: "https://sourcegraph.notion.site/ed8af5ecf15545b292816ebba261a93c"},
+			}},
+			{Text: &notionapi.Text{Content: " team in"}},
+			{Text: &notionapi.Text{Content: " #discuss-core-services."}},
+		}},
+	},
+}
