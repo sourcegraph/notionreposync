@@ -3,6 +3,8 @@ package renderer
 import (
 	"bytes"
 	"context"
+	"errors"
+	"regexp"
 	"strings"
 
 	"github.com/jomei/notionapi"
@@ -169,17 +171,54 @@ func (r *nodeRenderer) renderHeading(w util.BufWriter, source []byte, node ast.N
 	return ast.WalkContinue, nil
 }
 
+// Match for e.g. '[!IMPORTANT]'-style GitHub callouts in blockquotes.
+var calloutRegexp = regexp.MustCompile(`^\[!([A-Z]+)\]`)
+
 func (r *nodeRenderer) renderBlockquote(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	if entering {
-		block := &notionapi.QuoteBlock{
-			BasicBlock: notionapi.BasicBlock{
-				Object: notionapi.ObjectTypeBlock,
-				Type:   notionapi.BlockQuote,
-			},
-			Quote: notionapi.Quote{
-				RichText: []notionapi.RichText{},
-			},
+		// Look for a callout-looking thing.
+		var block notionapi.Block
+		if matches := calloutRegexp.FindSubmatch(node.Text(source)); len(matches) > 0 {
+			block = &notionapi.CalloutBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectTypeBlock,
+					Type:   notionapi.BlockCallout,
+				},
+				Callout: notionapi.Callout{
+					RichText: []notionapi.RichText{},
+					Icon: func() *notionapi.Icon {
+						var emoji string
+						// matches[1] is the capture group in calloutRegexp
+						switch string(matches[1]) {
+						case "NOTE":
+							emoji = "🔔"
+						case "IMPORTANT":
+							emoji = "⭐"
+						case "WARNING":
+							emoji = "🚨"
+						default:
+							emoji = "💡"
+						}
+						e := notionapi.Emoji(emoji)
+						return &notionapi.Icon{
+							Type:  "emoji",
+							Emoji: &e,
+						}
+					}(),
+				},
+			}
+		} else {
+			block = &notionapi.QuoteBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectTypeBlock,
+					Type:   notionapi.BlockQuote,
+				},
+				Quote: notionapi.Quote{
+					RichText: []notionapi.RichText{},
+				},
+			}
 		}
+
 		r.c.Set(node, block)
 		r.c.AppendBlock(block)
 		r.c.Descend(node)
@@ -195,6 +234,10 @@ func (r *nodeRenderer) renderCodeBlock(w util.BufWriter, source []byte, node ast
 		var sb strings.Builder
 		for i := 0; i < node.Lines().Len(); i++ {
 			line := node.Lines().At(i)
+			lineContents := line.Value(source)
+			if i == node.Lines().Len()-1 { // trim trailing newlines
+				lineContents = bytes.TrimRight(lineContents, "\n")
+			}
 			sb.Write(line.Value(source))
 		}
 
@@ -232,7 +275,11 @@ func (r *nodeRenderer) renderFencedCodeBlock(w util.BufWriter, source []byte, no
 		var sb strings.Builder
 		for i := 0; i < node.Lines().Len(); i++ {
 			line := node.Lines().At(i)
-			sb.Write(line.Value(source))
+			lineContents := line.Value(source)
+			if i == node.Lines().Len()-1 { // trim trailing newlines
+				lineContents = bytes.TrimRight(lineContents, "\n")
+			}
+			sb.Write(lineContents)
 		}
 
 		rts := []notionapi.RichText{{Text: &notionapi.Text{Content: sb.String()}}}
@@ -422,11 +469,22 @@ func (r *nodeRenderer) renderLink(w util.BufWriter, source []byte, node ast.Node
 		}
 
 		dest, err := r.conf.links.ResolveLink(dest)
+		if errors.Is(err, ErrDiscardLink) {
+			r.c.AppendRichText(&notionapi.RichText{
+				Text: &notionapi.Text{Content: linkText},
+			})
+			return ast.WalkSkipChildren, nil
+		}
 		if err != nil {
 			return ast.WalkStop, err
 		}
 
-		r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: linkText, Link: &notionapi.Link{Url: dest}}})
+		r.c.AppendRichText(&notionapi.RichText{
+			Text: &notionapi.Text{
+				Content: linkText,
+				Link:    &notionapi.Link{Url: dest},
+			},
+		})
 		return ast.WalkSkipChildren, nil
 	}
 
@@ -459,9 +517,56 @@ func (r *nodeRenderer) renderText(w util.BufWriter, source []byte, node ast.Node
 		return ast.WalkContinue, nil
 	}
 
+	// Special handling for callouts - we want to ignore the callout indicator,
+	// as defined in calloutRegexp, by skipping any content within the range of
+	// the match. To do this, we need to figure out a sliding window because
+	// the AST parses the callout indicator as 3 nodes:
+	// - "["
+	// - "!NOTE"
+	// - "]"
+	// So we assemble all possible 3-node window (3-grams) and check each for
+	// a callout indicator. If there is one, we drop this content.
+	for _, gram := range getNeighbouring3Grams(node) {
+		if nodeMatchesRegexp(calloutRegexp, source, gram[0], gram[1], gram[2]) {
+			return ast.WalkSkipChildren, nil
+		}
+	}
+
 	r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: string(segment.Value(source))}})
 
 	return ast.WalkContinue, nil
+}
+
+// getNeighbouring3Grams returns a list of 3-grams of the given node's neighbours
+// including the node itself. Elements of each 3-gram may be nil - callers should
+// check before using each node.
+func getNeighbouring3Grams(node ast.Node) [][3]ast.Node {
+	var windows [][3]ast.Node
+	var prev, middle, next = node.PreviousSibling(), node, node.NextSibling()
+	windows = append(windows, [3]ast.Node{prev, middle, next})
+	if next != nil {
+		windows = append(windows, [3]ast.Node{node, next, next.NextSibling()})
+	}
+	if prev != nil {
+		windows = append(windows, [3]ast.Node{prev.PreviousSibling(), prev, node})
+	}
+	return windows
+}
+
+// nodeMatchesRegexp returns true if the given nodes match the callout
+// indicator as defined by calloutRegexp.
+func nodeMatchesRegexp(re *regexp.Regexp, source []byte, prev, middle, next ast.Node) bool {
+	if prev == nil || middle == nil || next == nil {
+		return false
+	}
+	ptext, ntext := prev.Text(source), next.Text(source)
+	if bytes.Equal(ptext, []byte("[")) && bytes.Equal(ntext, []byte("]")) {
+		maybeCallout := string(ptext) + string(middle.Text(source)) + string(ntext)
+		if matches := re.FindStringSubmatch(maybeCallout); len(matches) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *nodeRenderer) renderString(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {

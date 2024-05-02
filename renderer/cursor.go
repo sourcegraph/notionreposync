@@ -30,6 +30,8 @@ func (c *cursor) RichText() *notionapi.RichText {
 		return &block.Heading3.RichText[len(block.Heading3.RichText)-1]
 	case *notionapi.QuoteBlock:
 		return &block.Quote.RichText[len(block.Quote.RichText)-1]
+	case *notionapi.CalloutBlock:
+		return &block.Callout.RichText[len(block.Callout.RichText)-1]
 	default:
 		panic(errUnknownBlock(block, nil))
 	}
@@ -68,6 +70,8 @@ func (c *cursor) AppendRichText(rt *notionapi.RichText) {
 		block.Heading3.RichText = append(block.Heading3.RichText, rts...)
 	case *notionapi.QuoteBlock:
 		block.Quote.RichText = append(block.Quote.RichText, rts...)
+	case *notionapi.CalloutBlock:
+		block.Callout.RichText = append(block.Callout.RichText, rts...)
 	default:
 		panic(errUnknownBlock(block, rts))
 	}
@@ -94,6 +98,8 @@ func (c *cursor) AppendBlock(b notionapi.Block) {
 			block.Heading3.Children = append(block.Heading3.Children, b)
 		case *notionapi.QuoteBlock:
 			block.Quote.Children = append(block.Quote.Children, b)
+		case *notionapi.CalloutBlock:
+			block.Callout.Children = append(block.Callout.Children, b)
 		default:
 			panic(errUnknownBlock(block, b))
 		}
