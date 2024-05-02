@@ -301,7 +301,7 @@ func (r *nodeRenderer) renderListItem(w util.BufWriter, source []byte, node ast.
 		}
 
 		r.c.Set(node, block)
-		r.c.AppendBlock(block, "here")
+		r.c.AppendBlock(block)
 		r.c.Descend(node)
 	} else {
 		r.c.Ascend()
