@@ -3,6 +3,7 @@ package renderer
 import (
 	"bytes"
 	"context"
+	"errors"
 	"regexp"
 	"strings"
 
@@ -468,11 +469,22 @@ func (r *nodeRenderer) renderLink(w util.BufWriter, source []byte, node ast.Node
 		}
 
 		dest, err := r.conf.links.ResolveLink(dest)
+		if errors.Is(err, ErrDiscardLink) {
+			r.c.AppendRichText(&notionapi.RichText{
+				Text: &notionapi.Text{Content: linkText},
+			})
+			return ast.WalkSkipChildren, nil
+		}
 		if err != nil {
 			return ast.WalkStop, err
 		}
 
-		r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: linkText, Link: &notionapi.Link{Url: dest}}})
+		r.c.AppendRichText(&notionapi.RichText{
+			Text: &notionapi.Text{
+				Content: linkText,
+				Link:    &notionapi.Link{Url: dest},
+			},
+		})
 		return ast.WalkSkipChildren, nil
 	}
 
