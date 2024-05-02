@@ -10,6 +10,8 @@ type LinkResolver interface {
 	// for example to resolve an appropriate absolute link to the relevant
 	// resource (e.g. another Notion document or a blob view).
 	//
+	// Links for image elements are provided to ResolveLink as well.
+	//
 	// If ErrDiscardLink is returned, the link is converted into a plain text
 	// element.
 	ResolveLink(link string) (string, error)

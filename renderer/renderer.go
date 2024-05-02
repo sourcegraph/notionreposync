@@ -451,6 +451,44 @@ func (r *nodeRenderer) renderEmphasis(w util.BufWriter, source []byte, node ast.
 }
 
 func (r *nodeRenderer) renderImage(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	n := node.(*ast.Image)
+	if entering {
+		if IsDangerousURL(n.Destination) {
+			r.renderCodeSpan(w, source, node, entering)
+			return ast.WalkContinue, nil
+		}
+
+		dest := string(n.Destination)
+		linkText := string(node.Text(source))
+		if linkText == "" {
+			linkText = dest
+		}
+
+		dest, err := r.conf.links.ResolveLink(dest)
+		if errors.Is(err, ErrDiscardLink) {
+			r.c.AppendRichText(&notionapi.RichText{
+				Text: &notionapi.Text{Content: linkText},
+			})
+			return ast.WalkSkipChildren, nil
+		}
+		if err != nil {
+			return ast.WalkStop, err
+		}
+
+		r.c.AppendBlock(&notionapi.ImageBlock{
+			Image: notionapi.Image{
+				Type: notionapi.FileTypeExternal,
+				Caption: []notionapi.RichText{
+					{Text: &notionapi.Text{Content: linkText}},
+				},
+				External: &notionapi.FileObject{
+					URL: dest,
+				},
+			},
+		})
+		return ast.WalkSkipChildren, nil
+	}
+
 	return ast.WalkContinue, nil
 }
 
