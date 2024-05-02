@@ -238,8 +238,7 @@ for c := node.FirstChild(); c != nil; c = c.NextSibling() {
     txt = txt + string(segment.Value(source))
 }
 r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: txt}, Annotations: &notionapi.Annotations{Code: true}})
-return ast.WalkSkipChildren, nil
-`}}},
+return ast.WalkSkipChildren, nil`}}},
 			Language: "plain text",
 		},
 	},
@@ -269,8 +268,7 @@ for c := node.FirstChild(); c != nil; c = c.NextSibling() {
     txt = txt + string(segment.Value(source))
 }
 r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: txt}, Annotations: &notionapi.Annotations{Code: true}})
-return ast.WalkSkipChildren, nil
-`}}},
+return ast.WalkSkipChildren, nil`}}},
 			Language: "go",
 		},
 	},
