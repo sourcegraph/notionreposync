@@ -29,6 +29,9 @@ func main() {
 
 	blocks := []notionapi.Block{}
 	repo, err := NewRepo(repoPath, "sourcegraph/sourcegraph")
+	if err != nil {
+		panic(err)
+	}
 	if err := Import(context.Background(), client, repo, nd); err != nil {
 		panic(err)
 	}
