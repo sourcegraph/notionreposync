@@ -174,11 +174,20 @@ func (r *nodeRenderer) renderHeading(w util.BufWriter, source []byte, node ast.N
 // Match for e.g. '[!IMPORTANT]'-style GitHub callouts in blockquotes.
 var calloutRegexp = regexp.MustCompile(`^\[!([A-Z]+)\]`)
 
+type githubCalloutKind string
+
+const (
+	githubCalloutKindNote      githubCalloutKind = "NOTE"
+	githubCalloutKindImportant githubCalloutKind = "IMPORTANT"
+	githubCalloutKindWarning   githubCalloutKind = "WARNING"
+)
+
 func (r *nodeRenderer) renderBlockquote(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	if entering {
 		// Look for a callout-looking thing.
 		var block notionapi.Block
 		if matches := calloutRegexp.FindSubmatch(node.Text(source)); len(matches) > 0 {
+			calloutKind := githubCalloutKind(matches[1])
 			block = &notionapi.CalloutBlock{
 				BasicBlock: notionapi.BasicBlock{
 					Object: notionapi.ObjectTypeBlock,
@@ -189,12 +198,12 @@ func (r *nodeRenderer) renderBlockquote(w util.BufWriter, source []byte, node as
 					Icon: func() *notionapi.Icon {
 						var emoji string
 						// matches[1] is the capture group in calloutRegexp
-						switch string(matches[1]) {
-						case "NOTE":
+						switch calloutKind {
+						case githubCalloutKindNote:
 							emoji = "🔔"
-						case "IMPORTANT":
+						case githubCalloutKindImportant:
 							emoji = "⭐"
-						case "WARNING":
+						case githubCalloutKindWarning:
 							emoji = "🚨"
 						default:
 							emoji = "💡"
@@ -203,6 +212,20 @@ func (r *nodeRenderer) renderBlockquote(w util.BufWriter, source []byte, node as
 						return &notionapi.Icon{
 							Type:  "emoji",
 							Emoji: &e,
+						}
+					}(),
+					Color: func() string {
+						// Set a background color:
+						// https://developers.notion.com/changelog/block-colors-are-now-supported-in-the-api
+						switch calloutKind {
+						case githubCalloutKindNote:
+							return "blue_background"
+						case githubCalloutKindImportant:
+							return "yellow_background"
+						case githubCalloutKindWarning:
+							return "red_background"
+						default:
+							return "gray_background"
 						}
 					}(),
 				},
