@@ -164,7 +164,6 @@ func (r *nodeRenderer) renderTableHeader(w util.BufWriter, source []byte, node a
 		r.c.Ascend()
 	}
 
-	// block.Table.HasColumnHeader = true
 	return ast.WalkContinue, nil
 }
 
@@ -187,8 +186,7 @@ func (r *nodeRenderer) renderTableRow(w util.BufWriter, source []byte, node ast.
 		bl := r.c.Block()
 		block, ok := bl.(*notionapi.TableRowBlock)
 		if !ok {
-			fmt.Printf("%T", bl)
-			panic("foo")
+			return ast.WalkStop, fmt.Errorf("expected current block to be a notionapi.TableRowBlock but got %T", bl)
 		}
 		// Take note of the width of the table.
 		width := len(block.TableRow.Cells)
@@ -199,8 +197,7 @@ func (r *nodeRenderer) renderTableRow(w util.BufWriter, source []byte, node ast.
 		bl = r.c.Block()
 		parentBlock, ok := bl.(*notionapi.TableBlock)
 		if !ok {
-			fmt.Printf("%T", bl)
-			panic("foo")
+			return ast.WalkStop, fmt.Errorf("expected parent block to be a notionapi.TableBlock but got %T", bl)
 		}
 
 		// Set the width of the table.
@@ -214,8 +211,7 @@ func (r *nodeRenderer) renderTableCell(w util.BufWriter, source []byte, node ast
 		bl := r.c.Block()
 		block, ok := bl.(*notionapi.TableRowBlock)
 		if !ok {
-			fmt.Printf("%T", bl)
-			panic("foo")
+			return ast.WalkStop, fmt.Errorf("expected parent block to be a notionapi.TableRowBlock but got %T", bl)
 		}
 		block.TableRow.Cells = append(block.TableRow.Cells, []notionapi.RichText{})
 	}
