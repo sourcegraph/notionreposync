@@ -24,7 +24,10 @@ func NewProcessor(ctx context.Context, blocks renderer.BlockUpdater, opts ...ren
 		goldmark.New(
 			goldmark.WithExtensions(extension.GFM),
 			goldmark.WithRenderer(
-				goldmarkrenderer.NewRenderer(goldmarkrenderer.WithNodeRenderers(util.Prioritized(r, 1000))),
+				// Default renderer priority is 1000 in the docs, but the GFM extensions also
+				// injects renderers for the tables, which are set to be 500, and would overrides
+				// our custom implementation if we didn't instead set the priority to 200.
+				goldmarkrenderer.NewRenderer(goldmarkrenderer.WithNodeRenderers(util.Prioritized(r, 200))),
 			),
 		),
 	}

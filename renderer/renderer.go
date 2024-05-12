@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/jomei/notionapi"
 	"github.com/yuin/goldmark/ast"
+	east "github.com/yuin/goldmark/extension/ast"
 	goldmark "github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/util"
 )
@@ -70,6 +72,13 @@ func (r *nodeRenderer) RegisterFuncs(reg goldmark.NodeRendererFuncRegisterer) {
 	reg.Register(ast.KindRawHTML, r.renderRawHTML)
 	reg.Register(ast.KindText, r.renderText)
 	reg.Register(ast.KindString, r.renderString)
+
+	// GFM
+
+	reg.Register(east.KindTable, r.renderTable)
+	reg.Register(east.KindTableHeader, r.renderTableHeader)
+	reg.Register(east.KindTableRow, r.renderTableRow)
+	reg.Register(east.KindTableCell, r.renderTableCell)
 }
 
 func (r *nodeRenderer) renderDocument(_ util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -111,6 +120,106 @@ func (r *nodeRenderer) writeBlocks() error {
 	}
 
 	return nil
+}
+
+func (r *nodeRenderer) renderTable(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	if entering {
+		block := &notionapi.TableBlock{
+			BasicBlock: notionapi.BasicBlock{
+				Object: notionapi.ObjectTypeBlock,
+				Type:   notionapi.BlockTypeTableBlock,
+			},
+			Table: notionapi.Table{},
+		}
+		r.c.Set(node, block)
+		r.c.AppendBlock(block)
+		r.c.Descend(node)
+	} else {
+		r.c.Ascend()
+	}
+	return ast.WalkContinue, nil
+}
+
+func (r *nodeRenderer) renderTableHeader(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	if entering {
+		bl, ok := r.c.Block().(*notionapi.TableBlock)
+		if !ok {
+			return ast.WalkStop, fmt.Errorf("parent for TableHeader expected to be a notionapi.TableBlock but got %T", r.c.Block())
+		}
+		bl.Table.HasColumnHeader = true
+
+		block := &notionapi.TableRowBlock{
+			BasicBlock: notionapi.BasicBlock{
+				Object: notionapi.ObjectTypeBlock,
+				Type:   notionapi.BlockTypeTableRowBlock,
+			},
+			TableRow: notionapi.TableRow{
+				Cells: [][]notionapi.RichText{},
+			},
+		}
+		r.c.Set(node, block)
+		r.c.AppendBlock(block)
+		r.c.Descend(node)
+	} else {
+		r.c.Ascend()
+	}
+
+	// block.Table.HasColumnHeader = true
+	return ast.WalkContinue, nil
+}
+
+func (r *nodeRenderer) renderTableRow(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	if entering {
+		block := &notionapi.TableRowBlock{
+			BasicBlock: notionapi.BasicBlock{
+				Object: notionapi.ObjectTypeBlock,
+				Type:   notionapi.BlockTypeTableRowBlock,
+			},
+			TableRow: notionapi.TableRow{
+				Cells: [][]notionapi.RichText{},
+			},
+		}
+		r.c.Set(node, block)
+		r.c.AppendBlock(block)
+		r.c.Descend(node)
+	} else {
+		// As we're exiting from the row, we set the width of the table.
+		bl := r.c.Block()
+		block, ok := bl.(*notionapi.TableRowBlock)
+		if !ok {
+			fmt.Printf("%T", bl)
+			panic("foo")
+		}
+		// Take note of the width of the table.
+		width := len(block.TableRow.Cells)
+
+		// Go back up a level
+		r.c.Ascend()
+
+		bl = r.c.Block()
+		parentBlock, ok := bl.(*notionapi.TableBlock)
+		if !ok {
+			fmt.Printf("%T", bl)
+			panic("foo")
+		}
+
+		// Set the width of the table.
+		parentBlock.Table.TableWidth = width
+	}
+	return ast.WalkContinue, nil
+}
+
+func (r *nodeRenderer) renderTableCell(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	if entering {
+		bl := r.c.Block()
+		block, ok := bl.(*notionapi.TableRowBlock)
+		if !ok {
+			fmt.Printf("%T", bl)
+			panic("foo")
+		}
+		block.TableRow.Cells = append(block.TableRow.Cells, []notionapi.RichText{})
+	}
+	return ast.WalkContinue, nil
 }
 
 func (r *nodeRenderer) renderHeading(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -163,8 +272,8 @@ func (r *nodeRenderer) renderHeading(w util.BufWriter, source []byte, node ast.N
 		}
 
 		r.c.Set(node, block)
-		r.c.Descend(node)
 		r.c.AppendBlock(block)
+		r.c.Descend(node)
 	} else {
 		r.c.Ascend()
 	}
