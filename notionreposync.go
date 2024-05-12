@@ -22,9 +22,6 @@ func Import(ctx context.Context, client *notionapi.Client, repo *Repo, nd *Notio
 	}
 
 	err := repo.Walk(func(d *Document) error {
-		// if d.Path != "index.md" && d.Path != "ref/ol.md" {
-		// 	return nil
-		// }
 		println("🦀", "rendering", d.Path)
 
 		notionPageID := string(d.ID)
