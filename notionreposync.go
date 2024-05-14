@@ -22,12 +22,9 @@ func Import(ctx context.Context, client *notionapi.Client, repo *Repo, nd *Notio
 	}
 
 	err := repo.Walk(func(d *Document) error {
-		// if d.Path != "index.md" && d.Path != "ref/ol.md" {
-		// 	return nil
-		// }
 		println("🦀", "rendering", d.Path)
 
-		notionPageID := string(nd.PageID)
+		notionPageID := string(d.ID)
 		processor := markdown.NewProcessor(
 			ctx,
 			notion.NewPageBlockUpdater(client, notionPageID),

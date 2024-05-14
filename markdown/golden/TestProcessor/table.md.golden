@@ -1,0 +1,140 @@
+[]notionapi.Block{
+	&notionapi.Heading1Block{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("heading_1"),
+		},
+		Heading1: notionapi.Heading{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{
+				Content: "We can use tables",
+			}},
+			{Text: &notionapi.Text{Content: " too"}},
+		}},
+	},
+	&notionapi.ParagraphBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("paragraph"),
+		},
+		Paragraph: notionapi.Paragraph{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "Glorious days ahead"}},
+			{Text: &notionapi.Text{Content: "!"}},
+		}},
+	},
+	&notionapi.TableBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("table"),
+		},
+		Table: notionapi.Table{
+			TableWidth:      3,
+			HasColumnHeader: true,
+			Children: notionapi.Blocks{
+				&notionapi.TableRowBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("table_row"),
+					},
+					TableRow: notionapi.TableRow{Cells: [][]notionapi.RichText{
+						{
+							{Text: &notionapi.Text{
+								Content: "A",
+							}},
+						},
+						{{Text: &notionapi.Text{Content: "B"}}},
+						{{Text: &notionapi.Text{Content: "C"}}},
+					}},
+				},
+				&notionapi.TableRowBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("table_row"),
+					},
+					TableRow: notionapi.TableRow{Cells: [][]notionapi.RichText{
+						{{Text: &notionapi.Text{Content: "1"}}},
+						{{Text: &notionapi.Text{Content: "1"}}},
+						{{Text: &notionapi.Text{Content: "1"}}},
+					}},
+				},
+				&notionapi.TableRowBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("table_row"),
+					},
+					TableRow: notionapi.TableRow{Cells: [][]notionapi.RichText{
+						{
+							{
+								Text:        &notionapi.Text{Content: "foo"},
+								Annotations: &notionapi.Annotations{Italic: true},
+							},
+							{Text: &notionapi.Text{Content: " is a common "}},
+							{
+								Text:        &notionapi.Text{Content: "term"},
+								Annotations: &notionapi.Annotations{Italic: true},
+							},
+						},
+						{{
+							Text:        &notionapi.Text{Content: "bar"},
+							Annotations: &notionapi.Annotations{Italic: true},
+						}},
+						{{
+							Text:        &notionapi.Text{Content: "baz"},
+							Annotations: &notionapi.Annotations{Bold: true},
+						}},
+					}},
+				},
+				&notionapi.TableRowBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("table_row"),
+					},
+					TableRow: notionapi.TableRow{Cells: [][]notionapi.RichText{
+						{{Text: &notionapi.Text{
+							Content: "link",
+							Link:    &notionapi.Link{Url: "https://github.com"},
+						}}},
+						{{
+							Text:        &notionapi.Text{Content: "code"},
+							Annotations: &notionapi.Annotations{Code: true},
+						}},
+						{},
+					}},
+				},
+			},
+		},
+	},
+	&notionapi.TableBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("table"),
+		},
+		Table: notionapi.Table{
+			TableWidth:      3,
+			HasColumnHeader: true,
+			Children: notionapi.Blocks{
+				&notionapi.TableRowBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("table_row"),
+					},
+					TableRow: notionapi.TableRow{Cells: [][]notionapi.RichText{
+						{{Text: &notionapi.Text{Content: "A"}}},
+						{{Text: &notionapi.Text{Content: "B"}}},
+						{{Text: &notionapi.Text{Content: "C"}}},
+					}},
+				},
+				&notionapi.TableRowBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("table_row"),
+					},
+					TableRow: notionapi.TableRow{Cells: [][]notionapi.RichText{
+						{{Text: &notionapi.Text{Content: "1"}}},
+						{{Text: &notionapi.Text{Content: "1"}}},
+						{{Text: &notionapi.Text{Content: "1"}}},
+					}},
+				},
+			},
+		},
+	},
+}

@@ -53,6 +53,12 @@ func NewRepo(path string, ref string) (*Repo, error) {
 		},
 	}
 
+	// We check the existence of the path before anything else, because otherwise
+	// filepath.Walk will fail with a cryptic error message (nil pointer).
+	if _, err := os.Stat(path); err != nil {
+		return nil, err
+	}
+
 	err := filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
 		if filepath.Base(p) == ".git" {
 			return filepath.SkipDir

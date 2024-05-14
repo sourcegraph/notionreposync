@@ -32,6 +32,8 @@ func (c *cursor) RichText() *notionapi.RichText {
 		return &block.Quote.RichText[len(block.Quote.RichText)-1]
 	case *notionapi.CalloutBlock:
 		return &block.Callout.RichText[len(block.Callout.RichText)-1]
+	case *notionapi.TableRowBlock:
+		return &block.TableRow.Cells[len(block.TableRow.Cells)-1][len(block.TableRow.Cells[len(block.TableRow.Cells)-1])-1]
 	default:
 		panic(errUnknownBlock(block, nil))
 	}
@@ -72,6 +74,8 @@ func (c *cursor) AppendRichText(rt *notionapi.RichText) {
 		block.Quote.RichText = append(block.Quote.RichText, rts...)
 	case *notionapi.CalloutBlock:
 		block.Callout.RichText = append(block.Callout.RichText, rts...)
+	case *notionapi.TableRowBlock:
+		block.TableRow.Cells[len(block.TableRow.Cells)-1] = append(block.TableRow.Cells[len(block.TableRow.Cells)-1], rts...)
 	default:
 		panic(errUnknownBlock(block, rts))
 	}
@@ -79,8 +83,6 @@ func (c *cursor) AppendRichText(rt *notionapi.RichText) {
 
 func (c *cursor) AppendBlock(b notionapi.Block) {
 	if c.cur.Kind() == ast.KindDocument {
-		c.rootBlocks = append(c.rootBlocks, b)
-	} else if c.cur.Parent().Kind() == ast.KindDocument {
 		c.rootBlocks = append(c.rootBlocks, b)
 	} else {
 		switch block := c.Block().(type) {
@@ -100,6 +102,8 @@ func (c *cursor) AppendBlock(b notionapi.Block) {
 			block.Quote.Children = append(block.Quote.Children, b)
 		case *notionapi.CalloutBlock:
 			block.Callout.Children = append(block.Callout.Children, b)
+		case *notionapi.TableBlock:
+			block.Table.Children = append(block.Table.Children, b)
 		default:
 			panic(errUnknownBlock(block, b))
 		}
