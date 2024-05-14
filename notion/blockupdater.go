@@ -91,7 +91,7 @@ func batchBlocks(children []notionapi.Block) []blockBatch {
 }
 
 // AddChildren appends blocks to the page root.
-func (b *PageBlockUpdater) AddChildren(ctx context.Context, children []notionapi.Block) (notionapi.BlockID, error) {
+func (b *PageBlockUpdater) AddChildren(ctx context.Context, children []notionapi.Block) error {
 	// As documented in renderer.BlockUpdater, we can trust that the given
 	// children adheres to Notion API requirements in terms of block length, but as for the depth limits,
 	// we need to perform API requests before pursuing, because we can't append a children to a block without
@@ -104,7 +104,7 @@ func (b *PageBlockUpdater) AddChildren(ctx context.Context, children []notionapi
 				Children: batch.blocks,
 			})
 			if err != nil {
-				return "", err
+				return err
 			}
 		} else {
 			// If we're dealing with a block that's too deep, we append the blocks one by one.
@@ -127,13 +127,13 @@ func (b *PageBlockUpdater) AddChildren(ctx context.Context, children []notionapi
 			// an optimization that we can deal later with if we really want to speed things up.
 			for _, child := range batch.blocks {
 				if err := b.walkAppend(ctx, notionapi.BlockID(b.pageID), child); err != nil {
-					return "", err
+					return err
 				}
 			}
 		}
 	}
 
-	return "", nil
+	return nil
 }
 
 // walkAppend recursively appends the given block and all its children to the given parent, making

@@ -103,8 +103,7 @@ func (r *nodeRenderer) renderDocument(_ util.BufWriter, source []byte, node ast.
 func (r *nodeRenderer) writeBlocks() error {
 	// If we have less than 100 blocks, we can just append them all at once.
 	if len(r.c.rootBlocks) < 100 {
-		_, err := r.block.AddChildren(r.conf.ctx, r.c.rootBlocks)
-		return err
+		return r.block.AddChildren(r.conf.ctx, r.c.rootBlocks)
 	}
 
 	acc := []notionapi.Block{}
@@ -113,7 +112,7 @@ func (r *nodeRenderer) writeBlocks() error {
 			// Minus one because otherwise, we'll have one too many block when flushing.
 			acc = append(acc, block)
 		} else {
-			if _, err := r.block.AddChildren(r.conf.ctx, append(acc, block)); err != nil {
+			if err := r.block.AddChildren(r.conf.ctx, append(acc, block)); err != nil {
 				return err
 			}
 			acc = []notionapi.Block{}
