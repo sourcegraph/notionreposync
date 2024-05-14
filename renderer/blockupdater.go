@@ -6,9 +6,18 @@ import (
 	"github.com/jomei/notionapi"
 )
 
+// MaxBlocksPerUpdate is the maximum number of blocks that can be added in a single request.
+//
 // See https://developers.notion.com/reference/patch-block-children
 const MaxBlocksPerUpdate = 100
 
+// MaxNestedBlockLevelsPerUpdate is the maximum number of nesting levels that can be added in a
+// single request.
+//
+// See https://developers.notion.com/reference/patch-block-children
+const MaxNestedBlockLevelsPerUpdate = 2
+
+// MaxRichTextContentLength is the maximum length of a single rich text content object.
 // See https://developers.notion.com/reference/request-limits#limits-for-property-values
 const MaxRichTextContentLength = 2000
 
@@ -21,5 +30,13 @@ type BlockUpdater interface {
 	// The caller calls it while respecting MaxBlocksPerUpdate and
 	// MaxRichTextContentLength - implementations can assume the set of children
 	// being added is of a reasonable size and adhere's to Notion's API limits.
-	AddChildren(ctx context.Context, children []notionapi.Block) error
+	AddChildren(ctx context.Context, children []notionapi.Block) (notionapi.BlockID, error)
 }
+
+type blockUpdateChunk struct {
+	parent   notionapi.Block
+	children []notionapi.Block
+	m        map[notionapi.BlockID]notionapi.Block
+}
+
+type blockUpdateChunks []blockUpdateChunks

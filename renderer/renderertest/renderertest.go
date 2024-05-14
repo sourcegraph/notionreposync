@@ -10,9 +10,9 @@ import (
 // Recorded blocks can be collected with 'GetAddedBlocks()'.
 type MockBlockUpdater struct{ addedBlocks []notionapi.Block }
 
-func (m *MockBlockUpdater) AddChildren(ctx context.Context, children []notionapi.Block) error {
+func (m *MockBlockUpdater) AddChildren(ctx context.Context, children []notionapi.Block) (notionapi.BlockID, error) {
 	m.addedBlocks = append(m.addedBlocks, children...)
-	return nil
+	return "", nil
 }
 
 func (m *MockBlockUpdater) GetAddedBlocks() []notionapi.Block {
