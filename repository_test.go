@@ -15,7 +15,7 @@ func TestNewRepo(t *testing.T) {
 			"foo/index.md",
 		}
 
-		repo, err := NewRepo("../testdata/", "testref")
+		repo, err := NewRepo("testdata/", "testref")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -30,7 +30,7 @@ func TestNewRepo(t *testing.T) {
 }
 
 func TestFindDocument(t *testing.T) {
-	repo, err := NewRepo("../testdata/", "testref")
+	repo, err := NewRepo("testdata/", "testref")
 	if err != nil {
 		t.Fatal(err)
 	}

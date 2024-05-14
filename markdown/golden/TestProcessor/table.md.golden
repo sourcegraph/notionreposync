@@ -103,4 +103,38 @@
 			},
 		},
 	},
+	&notionapi.TableBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("table"),
+		},
+		Table: notionapi.Table{
+			TableWidth:      3,
+			HasColumnHeader: true,
+			Children: notionapi.Blocks{
+				&notionapi.TableRowBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("table_row"),
+					},
+					TableRow: notionapi.TableRow{Cells: [][]notionapi.RichText{
+						{{Text: &notionapi.Text{Content: "A"}}},
+						{{Text: &notionapi.Text{Content: "B"}}},
+						{{Text: &notionapi.Text{Content: "C"}}},
+					}},
+				},
+				&notionapi.TableRowBlock{
+					BasicBlock: notionapi.BasicBlock{
+						Object: notionapi.ObjectType("block"),
+						Type:   notionapi.BlockType("table_row"),
+					},
+					TableRow: notionapi.TableRow{Cells: [][]notionapi.RichText{
+						{{Text: &notionapi.Text{Content: "1"}}},
+						{{Text: &notionapi.Text{Content: "1"}}},
+						{{Text: &notionapi.Text{Content: "1"}}},
+					}},
+				},
+			},
+		},
+	},
 }
