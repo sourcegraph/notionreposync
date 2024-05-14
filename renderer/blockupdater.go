@@ -6,9 +6,18 @@ import (
 	"github.com/jomei/notionapi"
 )
 
+// MaxBlocksPerUpdate is the maximum number of blocks that can be added in a single request.
+//
 // See https://developers.notion.com/reference/patch-block-children
 const MaxBlocksPerUpdate = 100
 
+// MaxNestedBlockLevelsPerUpdate is the maximum number of nesting levels that can be added in a
+// single request.
+//
+// See https://developers.notion.com/reference/patch-block-children
+const MaxNestedBlockLevelsPerUpdate = 2
+
+// MaxRichTextContentLength is the maximum length of a single rich text content object.
 // See https://developers.notion.com/reference/request-limits#limits-for-property-values
 const MaxRichTextContentLength = 2000
 
