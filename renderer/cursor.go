@@ -74,8 +74,6 @@ func (c *cursor) AppendRichText(rt *notionapi.RichText) {
 		block.Quote.RichText = append(block.Quote.RichText, rts...)
 	case *notionapi.CalloutBlock:
 		block.Callout.RichText = append(block.Callout.RichText, rts...)
-	case *notionapi.TableBlock:
-		panic(rts[0].Text.Content)
 	case *notionapi.TableRowBlock:
 		block.TableRow.Cells[len(block.TableRow.Cells)-1] = append(block.TableRow.Cells[len(block.TableRow.Cells)-1], rts...)
 	default:
