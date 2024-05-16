@@ -8,6 +8,7 @@ import (
 type config struct {
 	ctx   context.Context
 	links LinkResolver
+	debug bool
 }
 
 // newConfig returns a new default Config, such that all values have a usable
@@ -32,5 +33,11 @@ func (o optionFunc) setConfig(c *config) { o(c) }
 func WithLinkResolver(links LinkResolver) Option {
 	return optionFunc(func(c *config) {
 		c.links = links
+	})
+}
+
+func WithDebug(debug bool) Option {
+	return optionFunc(func(c *config) {
+		c.debug = debug
 	})
 }
