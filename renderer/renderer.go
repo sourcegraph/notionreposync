@@ -84,15 +84,15 @@ func (r *nodeRenderer) RegisterFuncs(reg goldmark.NodeRendererFuncRegisterer) {
 }
 
 func (r *nodeRenderer) debugLog(entering bool, node ast.Node) {
-	if !r.conf.debug {
+	if r.conf.debugHandler == nil {
 		return
 	}
 	if entering {
-		fmt.Printf("%s<%s>\n", strings.Repeat("  ", r.debugPaddingLevel), node.Kind().String())
+		r.conf.debugHandler(fmt.Sprintf("%s<%s>\n", strings.Repeat("  ", r.debugPaddingLevel), node.Kind().String()))
 		r.debugPaddingLevel += 1
 	} else {
 		r.debugPaddingLevel -= 1
-		fmt.Printf("%s</%s>\n", strings.Repeat("  ", r.debugPaddingLevel), node.Kind().String())
+		r.conf.debugHandler(fmt.Sprintf("%s</%s>\n", strings.Repeat("  ", r.debugPaddingLevel), node.Kind().String()))
 	}
 }
 

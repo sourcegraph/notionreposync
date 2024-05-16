@@ -6,9 +6,9 @@ import (
 
 // config represents the configuration of the renderer.
 type config struct {
-	ctx   context.Context
-	links LinkResolver
-	debug bool
+	ctx          context.Context
+	links        LinkResolver
+	debugHandler func(string)
 }
 
 // newConfig returns a new default Config, such that all values have a usable
@@ -36,8 +36,8 @@ func WithLinkResolver(links LinkResolver) Option {
 	})
 }
 
-func WithDebug(debug bool) Option {
+func WithDebugHandler(fn func(line string)) Option {
 	return optionFunc(func(c *config) {
-		c.debug = debug
+		c.debugHandler = fn
 	})
 }
