@@ -2,6 +2,7 @@ package notion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jomei/notionapi"
@@ -54,8 +55,13 @@ func (b *blockWithChild) Children() *notionapi.Blocks {
 	case *notionapi.CodeBlock:
 		return nil
 	default:
-		panic(fmt.Sprintf("unknown block type: %T", b.b))
+		panic(errUnknownBlock(b.b, nil))
 	}
+}
+
+func errUnknownBlock(block notionapi.Block, data any) error {
+	raw, _ := json.Marshal(data)
+	return fmt.Errorf("unknown block type: %T (%s)", block, string(raw))
 }
 
 type blockBatch struct {
