@@ -1,0 +1,110 @@
+[]notionapi.Block{&notionapi.NumberedListItemBlock{
+	BasicBlock: notionapi.BasicBlock{
+		Object: notionapi.ObjectType("block"),
+		Type:   notionapi.BlockType("numbered_list_item"),
+	},
+	NumberedListItem: notionapi.ListItem{
+		RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{
+				Content: "Write an RFC describing the problem, data that will be added, and how Sourcegraph will use the data to make decisions. sourcegraph/bizops must be a required reviewer. Please include the following information",
+			}},
+			{Text: &notionapi.Text{Content: " RFC:"}},
+		},
+		Children: notionapi.Blocks{
+			&notionapi.BulletedListItemBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectType("block"),
+					Type:   notionapi.BlockType("bulleted_list_item"),
+				},
+				BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+					{
+						Text: &notionapi.Text{Content: "What are the exact data fields you're requesting to"},
+					},
+					{Text: &notionapi.Text{Content: " add?"}},
+				}},
+			},
+			&notionapi.BulletedListItemBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectType("block"),
+					Type:   notionapi.BlockType("bulleted_list_item"),
+				},
+				BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+					{Text: &notionapi.Text{Content: "What are the exact questions you're trying to answer with this"}},
+					{Text: &notionapi.Text{Content: " new"}},
+					{Text: &notionapi.Text{Content: "data? Why can't we use existing data to answer"}},
+					{Text: &notionapi.Text{Content: " them?"}},
+				}},
+			},
+			&notionapi.BulletedListItemBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectType("block"),
+					Type:   notionapi.BlockType("bulleted_list_item"),
+				},
+				BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+					{Text: &notionapi.Text{Content: "How does the JSON payload look once those fields are"}},
+					{Text: &notionapi.Text{Content: " added?"}},
+				}},
+			},
+			&notionapi.ParagraphBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectType("block"),
+					Type:   notionapi.BlockType("paragraph"),
+				},
+				Paragraph: notionapi.Paragraph{RichText: []notionapi.RichText{
+					{Text: &notionapi.Text{Content: "The RFC should also include answers to these questions (if"}},
+					{Text: &notionapi.Text{Content: " applicable):"}},
+				}},
+			},
+			&notionapi.BulletedListItemBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectType("block"),
+					Type:   notionapi.BlockType("bulleted_list_item"),
+				},
+				BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+					{Text: &notionapi.Text{Content: "Why was this particular metric/data chosen? What business problem does  collecting this"}},
+					{Text: &notionapi.Text{Content: " address?"}},
+				}},
+			},
+			&notionapi.BulletedListItemBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectType("block"),
+					Type:   notionapi.BlockType("bulleted_list_item"),
+				},
+				BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+					{Text: &notionapi.Text{Content: "What specific product or engineering decisions will be made by having  this"}},
+					{Text: &notionapi.Text{Content: " data?"}},
+				}},
+			},
+			&notionapi.BulletedListItemBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectType("block"),
+					Type:   notionapi.BlockType("bulleted_list_item"),
+				},
+				BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+					{Text: &notionapi.Text{Content: "Will this data be needed from every single installation, or only from a  select"}},
+					{Text: &notionapi.Text{Content: " few?"}},
+				}},
+			},
+			&notionapi.BulletedListItemBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectType("block"),
+					Type:   notionapi.BlockType("bulleted_list_item"),
+				},
+				BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+					{Text: &notionapi.Text{Content: "Will it be needed forever, or only for a short time? If only for a  short time, what is the criteria and estimated timeline for removing the  data point"}},
+					{Text: &notionapi.Text{Content: "(s)?"}},
+				}},
+			},
+			&notionapi.BulletedListItemBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectType("block"),
+					Type:   notionapi.BlockType("bulleted_list_item"),
+				},
+				BulletedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+					{Text: &notionapi.Text{Content: "Have you considered alternatives? E.g., collecting this data from Sourcegraph.com, or adding a report for admins that we can request from some number of friendly"}},
+					{Text: &notionapi.Text{Content: " customers?"}},
+				}},
+			},
+		},
+	},
+}}

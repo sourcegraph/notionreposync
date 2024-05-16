@@ -8,15 +8,25 @@ import (
 	"testing"
 
 	"github.com/hexops/autogold/v2"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/sourcegraph/notionreposync/markdown"
 	"github.com/sourcegraph/notionreposync/renderer/renderertest"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestProcessor(t *testing.T) {
-	filepath.WalkDir("../testdata", func(path string, d fs.DirEntry, err error) error {
+	t.Run("ref", func(t *testing.T) {
+		process(t, "../testdata/ref")
+	})
+	t.Run("bugs", func(t *testing.T) {
+		process(t, "../testdata/bugs")
+	})
+}
+
+func process(t *testing.T, path string) {
+	t.Helper()
+
+	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -42,4 +52,6 @@ func TestProcessor(t *testing.T) {
 
 		return nil
 	})
+
+	assert.NoError(t, err)
 }

@@ -2,6 +2,7 @@ package notion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jomei/notionapi"
@@ -51,9 +52,16 @@ func (b *blockWithChild) Children() *notionapi.Blocks {
 		return &bl.BulletedListItem.Children
 	case *notionapi.NumberedListItemBlock:
 		return &bl.NumberedListItem.Children
+	case *notionapi.CodeBlock:
+		return nil
 	default:
-		panic(fmt.Sprintf("unknown block type: %T", b))
+		panic(errUnknownBlock(b.b, nil))
 	}
+}
+
+func errUnknownBlock(block notionapi.Block, data any) error {
+	raw, _ := json.Marshal(data)
+	return fmt.Errorf("unknown block type: %T (%s)", block, string(raw))
 }
 
 type blockBatch struct {
@@ -145,7 +153,7 @@ func (b *PageBlockUpdater) AddChildren(ctx context.Context, children []notionapi
 func (b *PageBlockUpdater) walkAppend(ctx context.Context, parentID notionapi.BlockID, block notionapi.Block) error {
 	cb := blockWithChild{block}
 	children := cb.Children()
-	if len(*children) > 0 {
+	if children != nil && len(*children) > 0 {
 		detachedChildren := *children
 		*children = nil
 		resp, err := b.client.Block.AppendChildren(ctx, parentID, &notionapi.AppendBlockChildrenRequest{

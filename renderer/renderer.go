@@ -26,6 +26,8 @@ type nodeRenderer struct {
 	conf  config
 	block BlockUpdater
 	c     *cursor
+
+	debugPaddingLevel int
 }
 
 var _ goldmark.NodeRenderer = (*nodeRenderer)(nil)
@@ -81,7 +83,21 @@ func (r *nodeRenderer) RegisterFuncs(reg goldmark.NodeRendererFuncRegisterer) {
 	reg.Register(east.KindTableCell, r.renderTableCell)
 }
 
+func (r *nodeRenderer) debugLog(entering bool, node ast.Node) {
+	if r.conf.debugHandler == nil {
+		return
+	}
+	if entering {
+		r.conf.debugHandler(fmt.Sprintf("%s<%s>\n", strings.Repeat("  ", r.debugPaddingLevel), node.Kind().String()))
+		r.debugPaddingLevel += 1
+	} else {
+		r.debugPaddingLevel -= 1
+		r.conf.debugHandler(fmt.Sprintf("%s</%s>\n", strings.Repeat("  ", r.debugPaddingLevel), node.Kind().String()))
+	}
+}
+
 func (r *nodeRenderer) renderDocument(_ util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	if entering {
 		r.c = &cursor{
 			rootBlocks: []notionapi.Block{},
@@ -123,6 +139,7 @@ func (r *nodeRenderer) writeBlocks() error {
 }
 
 func (r *nodeRenderer) renderTable(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	if entering {
 		block := &notionapi.TableBlock{
 			BasicBlock: notionapi.BasicBlock{
@@ -141,6 +158,7 @@ func (r *nodeRenderer) renderTable(w util.BufWriter, source []byte, node ast.Nod
 }
 
 func (r *nodeRenderer) renderTableHeader(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	if entering {
 		bl, ok := r.c.Block().(*notionapi.TableBlock)
 		if !ok {
@@ -168,6 +186,7 @@ func (r *nodeRenderer) renderTableHeader(w util.BufWriter, source []byte, node a
 }
 
 func (r *nodeRenderer) renderTableRow(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	if entering {
 		block := &notionapi.TableRowBlock{
 			BasicBlock: notionapi.BasicBlock{
@@ -207,6 +226,7 @@ func (r *nodeRenderer) renderTableRow(w util.BufWriter, source []byte, node ast.
 }
 
 func (r *nodeRenderer) renderTableCell(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	if entering {
 		bl := r.c.Block()
 		block, ok := bl.(*notionapi.TableRowBlock)
@@ -219,6 +239,7 @@ func (r *nodeRenderer) renderTableCell(w util.BufWriter, source []byte, node ast
 }
 
 func (r *nodeRenderer) renderHeading(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	if entering {
 		n := node.(*ast.Heading)
 		var block notionapi.Block
@@ -288,6 +309,7 @@ const (
 )
 
 func (r *nodeRenderer) renderBlockquote(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	if entering {
 		// Look for a callout-looking thing.
 		var block notionapi.Block
@@ -358,6 +380,7 @@ func (r *nodeRenderer) renderBlockquote(w util.BufWriter, source []byte, node as
 }
 
 func (r *nodeRenderer) renderCodeBlock(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	if entering {
 		var sb strings.Builder
 		for i := 0; i < node.Lines().Len(); i++ {
@@ -398,6 +421,7 @@ func (r *nodeRenderer) renderCodeBlock(w util.BufWriter, source []byte, node ast
 }
 
 func (r *nodeRenderer) renderFencedCodeBlock(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	n := node.(*ast.FencedCodeBlock)
 	if entering {
 		var sb strings.Builder
@@ -438,14 +462,17 @@ func (r *nodeRenderer) renderFencedCodeBlock(w util.BufWriter, source []byte, no
 }
 
 func (r *nodeRenderer) renderHTMLBlock(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	return r.renderCodeBlock(w, source, node, entering)
 }
 
 func (r *nodeRenderer) renderList(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	return ast.WalkContinue, nil
 }
 
 func (r *nodeRenderer) renderListItem(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	n := node.Parent().(*ast.List)
 	if entering {
 		var block notionapi.Block
@@ -485,12 +512,32 @@ func (r *nodeRenderer) renderListItem(w util.BufWriter, source []byte, node ast.
 }
 
 func (r *nodeRenderer) renderParagraph(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	// Markdown AST has paragraphs inside blockquotes, but Notion doesn't, so instead, we just pass through.
 	if node.Parent().Kind() == ast.KindBlockquote {
 		return ast.WalkContinue, nil
 	}
-	// Markdown AST has paragraphs inside list items, but Notion doesn't, so instead, we just pass through.
-	if node.Parent().Kind() == ast.KindListItem {
+
+	// Notion concept of a paragraph is different from Markdown's: Notion's paragraph is a block,
+	// but Markdown's paragraph is a "span". In concrete term, if we try to put a paragraph inside a list item,
+	// it will look like this in Notion: "- \n[paragraph content]" instead of "- [paragraph content]".
+	//
+	// Yet, there is a case where we we should not ignore the paragraph: when one is added in the middle of a list,
+	// such as:
+	// ------example------
+	// - foo
+	// - bar
+	//
+	//   My paragraph
+	//
+	// - baz
+	// ------example------
+	//
+	// So with all of that in mind:
+	// - If the paragraph is the first child of a list item, we should ignore it.
+	// - But if the paragraph previous sibling is a list, we should instead create it.
+	if !(node.PreviousSibling() != nil && node.PreviousSibling().Kind() == ast.KindList) &&
+		node.Parent().Kind() == ast.KindListItem {
 		return ast.WalkContinue, nil
 	}
 
@@ -512,6 +559,7 @@ func (r *nodeRenderer) renderParagraph(w util.BufWriter, source []byte, node ast
 }
 
 func (r *nodeRenderer) renderTextBlock(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	if entering {
 		// r.c.Set(node, r.c.Block())
 		// r.c.Descend(node)
@@ -523,6 +571,7 @@ func (r *nodeRenderer) renderTextBlock(w util.BufWriter, source []byte, node ast
 }
 
 func (r *nodeRenderer) renderThematicBreak(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	if !entering {
 		return ast.WalkContinue, nil
 	}
@@ -542,10 +591,12 @@ func (r *nodeRenderer) renderThematicBreak(w util.BufWriter, source []byte, node
 }
 
 func (r *nodeRenderer) renderAutoLink(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	return ast.WalkContinue, nil
 }
 
 func (r *nodeRenderer) renderCodeSpan(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	if entering {
 		var txt string
 		for c := node.FirstChild(); c != nil; c = c.NextSibling() {
@@ -561,6 +612,7 @@ func (r *nodeRenderer) renderCodeSpan(w util.BufWriter, source []byte, node ast.
 }
 
 func (r *nodeRenderer) renderEmphasis(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	n := node.(*ast.Emphasis)
 
 	if !entering {
@@ -579,10 +631,12 @@ func (r *nodeRenderer) renderEmphasis(w util.BufWriter, source []byte, node ast.
 }
 
 func (r *nodeRenderer) renderImage(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	return ast.WalkContinue, nil
 }
 
 func (r *nodeRenderer) renderLink(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	n := node.(*ast.Link)
 	if entering {
 		if IsDangerousURL(n.Destination) {
@@ -620,6 +674,7 @@ func (r *nodeRenderer) renderLink(w util.BufWriter, source []byte, node ast.Node
 }
 
 func (r *nodeRenderer) renderRawHTML(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	// Notion doesn't support this, so we just create a code block instead.
 
 	if entering {
@@ -638,6 +693,7 @@ func (r *nodeRenderer) renderRawHTML(w util.BufWriter, source []byte, node ast.N
 }
 
 func (r *nodeRenderer) renderText(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	n := node.(*ast.Text)
 	segment := n.Segment
 
@@ -698,6 +754,7 @@ func nodeMatchesRegexp(re *regexp.Regexp, source []byte, prev, middle, next ast.
 }
 
 func (r *nodeRenderer) renderString(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	r.debugLog(entering, node)
 	return ast.WalkContinue, nil
 }
 
