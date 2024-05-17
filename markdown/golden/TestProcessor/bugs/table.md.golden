@@ -1,0 +1,146 @@
+[]notionapi.Block{
+	&notionapi.ParagraphBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("paragraph"),
+		},
+		Paragraph: notionapi.Paragraph{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{
+				Content: "The subject line should be concise and easy to visually scan in a list of commits, giving context around what code has",
+			}},
+			{Text: &notionapi.Text{Content: " changed."}},
+		}},
+	},
+	&notionapi.NumberedListItemBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("numbered_list_item"),
+		},
+		NumberedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "Prefix the subject with the primary area of code that was affected (e.g. "}},
+			{
+				Text:        &notionapi.Text{Content: "web:"},
+				Annotations: &notionapi.Annotations{Code: true},
+			},
+			{Text: &notionapi.Text{Content: ", "}},
+			{
+				Text:        &notionapi.Text{Content: "cmd/searcher:"},
+				Annotations: &notionapi.Annotations{Code: true},
+			},
+			{Text: &notionapi.Text{Content: ")."}},
+		}},
+	},
+	&notionapi.NumberedListItemBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("numbered_list_item"),
+		},
+		NumberedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "Limit the subject line to 50"}},
+			{Text: &notionapi.Text{Content: " characters."}},
+		}},
+	},
+	&notionapi.NumberedListItemBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("numbered_list_item"),
+		},
+		NumberedListItem: notionapi.ListItem{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "Do not end the subject line with"}},
+			{Text: &notionapi.Text{Content: " punctuation."}},
+		}},
+	},
+	&notionapi.NumberedListItemBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("numbered_list_item"),
+		},
+		NumberedListItem: notionapi.ListItem{
+			RichText: []notionapi.RichText{
+				{Text: &notionapi.Text{Content: "Use the "}},
+				{Text: &notionapi.Text{
+					Content: "imperative mood",
+					Link:    &notionapi.Link{Url: "https://chris.beams.io/posts/git-commit/#imperative"},
+				}},
+				{Text: &notionapi.Text{Content: " in the subject"}},
+				{Text: &notionapi.Text{Content: " line."}},
+			},
+			Children: notionapi.Blocks{&notionapi.TableBlock{
+				BasicBlock: notionapi.BasicBlock{
+					Object: notionapi.ObjectType("block"),
+					Type:   notionapi.BlockType("table"),
+				},
+				Table: notionapi.Table{
+					TableWidth:      2,
+					HasColumnHeader: true,
+					Children: notionapi.Blocks{
+						&notionapi.TableRowBlock{
+							BasicBlock: notionapi.BasicBlock{
+								Object: notionapi.ObjectType("block"),
+								Type:   notionapi.BlockType("table_row"),
+							},
+							TableRow: notionapi.TableRow{Cells: [][]notionapi.RichText{
+								{{
+									Text: &notionapi.Text{Content: "Prefer"},
+								}},
+								{
+									{Text: &notionapi.Text{Content: "Instead"}},
+									{Text: &notionapi.Text{Content: " of"}},
+								},
+							}},
+						},
+						&notionapi.TableRowBlock{
+							BasicBlock: notionapi.BasicBlock{
+								Object: notionapi.ObjectType("block"),
+								Type:   notionapi.BlockType("table_row"),
+							},
+							TableRow: notionapi.TableRow{Cells: [][]notionapi.RichText{
+								{
+									{Text: &notionapi.Text{Content: "Fix bug in"}},
+									{Text: &notionapi.Text{Content: " XYZ"}},
+								},
+								{
+									{Text: &notionapi.Text{Content: "Fixed a bug in"}},
+									{Text: &notionapi.Text{Content: " XYZ"}},
+								},
+							}},
+						},
+						&notionapi.TableRowBlock{
+							BasicBlock: notionapi.BasicBlock{
+								Object: notionapi.ObjectType("block"),
+								Type:   notionapi.BlockType("table_row"),
+							},
+							TableRow: notionapi.TableRow{Cells: [][]notionapi.RichText{
+								{
+									{Text: &notionapi.Text{Content: "Change behavior of"}},
+									{Text: &notionapi.Text{Content: " X"}},
+								},
+								{
+									{Text: &notionapi.Text{Content: "Changing behavior of"}},
+									{Text: &notionapi.Text{Content: " X"}},
+								},
+							}},
+						},
+					},
+				},
+			}},
+		},
+	},
+	&notionapi.ParagraphBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("paragraph"),
+		},
+		Paragraph: notionapi.Paragraph{RichText: []notionapi.RichText{{Text: &notionapi.Text{Content: "Example:"}}}},
+	},
+	&notionapi.QuoteBlock{
+		BasicBlock: notionapi.BasicBlock{
+			Object: notionapi.ObjectType("block"),
+			Type:   notionapi.BlockType("quote"),
+		},
+		Quote: notionapi.Quote{RichText: []notionapi.RichText{
+			{Text: &notionapi.Text{Content: "cmd/searcher: Add scaffolding for structural"}},
+			{Text: &notionapi.Text{Content: " search"}},
+		}},
+	},
+}
