@@ -51,6 +51,9 @@ func (r *LinkResolver) ResolveLink(link string) (string, error) {
 	}
 
 	d := r.repo.FindDocument(filepath.Join(r.basepath, link))
+	if d == nil {
+		return "", fmt.Errorf("could not find document %q", link)
+	}
 	return fmt.Sprintf("/%s", strings.ReplaceAll(string(d.ID), "-", "")), nil
 }
 
