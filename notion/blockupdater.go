@@ -53,7 +53,10 @@ func (b *blockWithChild) Children() *notionapi.Blocks {
 	case *notionapi.NumberedListItemBlock:
 		return &bl.NumberedListItem.Children
 	case *notionapi.CodeBlock:
+		// Code blocks do not have children.
 		return nil
+	case *notionapi.TableBlock:
+		return &bl.Table.Children
 	default:
 		panic(errUnknownBlock(b.b, nil))
 	}
@@ -153,7 +156,9 @@ func (b *PageBlockUpdater) AddChildren(ctx context.Context, children []notionapi
 func (b *PageBlockUpdater) walkAppend(ctx context.Context, parentID notionapi.BlockID, block notionapi.Block) error {
 	cb := blockWithChild{block}
 	children := cb.Children()
-	if children != nil && len(*children) > 0 {
+	// If there are children and if the current block is *not* a table, we go block by block.
+	// Tables are a special case, because you can't append a table without its children.
+	if children != nil && len(*children) > 0 && block.GetType() != notionapi.BlockTypeTableBlock {
 		detachedChildren := *children
 		*children = nil
 		resp, err := b.client.Block.AppendChildren(ctx, parentID, &notionapi.AppendBlockChildrenRequest{
