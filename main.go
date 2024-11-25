@@ -22,7 +22,7 @@ var app = cli.App{
 			EnvVars:  []string{"NOTION_PAGE_ID"},
 			Action: func(ctx *cli.Context, v string) error {
 				if v == "" {
-					return fmt.Errorf("page-id (NOTION_PAGE_ID) cannot be empty")
+					return fmt.Errorf("page-id ($NOTION_PAGE_ID) cannot be empty")
 				}
 				return nil
 			},
@@ -33,7 +33,7 @@ var app = cli.App{
 			EnvVars:  []string{"NOTION_SECRET"},
 			Action: func(ctx *cli.Context, v string) error {
 				if v == "" {
-					return fmt.Errorf("api-key (NOTION_SECRET) cannot be empty")
+					return fmt.Errorf("api-key ($NOTION_SECRET) cannot be empty")
 				}
 				return nil
 			},
