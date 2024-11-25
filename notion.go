@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jomei/notionapi"
@@ -29,36 +30,64 @@ func NewNotionDoc(pageID string) *NotionDoc {
 	}
 }
 
+func withPageProperty(p *notionapi.Page, key string, action func(prop notionapi.Property) error) error {
+	if prop, ok := p.Properties[key]; ok {
+		return action(prop)
+	} else {
+		return fmt.Errorf("%q property not found on page properties", key)
+	}
+
+}
+
 func (n *NotionDoc) FetchMetadata(ctx context.Context, c *notionapi.Client) error {
 	page, err := c.Page.Get(ctx, n.PageID)
 	if err != nil {
 		return err
 	}
 
-	if page.Properties["Repository"].GetType() != "rich_text" {
-		return errors.New("'Repository' property is not a text property")
-	}
-	rt := page.Properties["Repository"].(*notionapi.RichTextProperty)
-	if len(rt.RichText) < 1 {
-		return errors.New("'Repository' property is empty")
-	}
-	n.metadata.Repository = rt.RichText[0].Text.Content
-
-	if page.Properties["LastSyncAt"].GetType() != "date" {
-		return errors.New("'LastSyncAt' property is not a date property")
-	}
-	d := page.Properties["LastSyncAt"].(*notionapi.DateProperty)
-	if d.Date != nil {
-		n.metadata.LastSyncAt = time.Time(*d.Date.Start)
+	err = withPageProperty(page, "Repository", func(prop notionapi.Property) error {
+		if prop.GetType() != "rich_text" {
+			return errors.New("'Repository' property is not a text property")
+		}
+		rt := prop.(*notionapi.RichTextProperty)
+		if len(rt.RichText) < 1 {
+			return errors.New("'Repository' property is empty")
+		}
+		n.metadata.Repository = rt.RichText[0].Text.Content
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
-	if page.Properties["LastSyncRev"].GetType() != "rich_text" {
-		return errors.New("'LastSyncRev' property is not a text property")
+	err = withPageProperty(page, "LastSyncAt", func(prop notionapi.Property) error {
+		if prop.GetType() != "date" {
+			return errors.New("'LastSyncAt' property is not a date property")
+		}
+		d := prop.(*notionapi.DateProperty)
+		if d.Date != nil {
+			n.metadata.LastSyncAt = time.Time(*d.Date.Start)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
-	rt = page.Properties["LastSyncRev"].(*notionapi.RichTextProperty)
-	if len(rt.RichText) > 0 {
-		n.metadata.LastSyncRev = rt.RichText[0].Text.Content
+
+	err = withPageProperty(page, "LastSyncAt", func(prop notionapi.Property) error {
+		if page.Properties["LastSyncRev"].GetType() != "rich_text" {
+			return errors.New("'LastSyncRev' property is not a text property")
+		}
+		rt := page.Properties["LastSyncRev"].(*notionapi.RichTextProperty)
+		if len(rt.RichText) > 0 {
+			n.metadata.LastSyncRev = rt.RichText[0].Text.Content
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
+
 	return nil
 }
 
