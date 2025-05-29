@@ -318,7 +318,7 @@ func (r *nodeRenderer) renderBlockquote(w util.BufWriter, source []byte, node as
 			block = &notionapi.CalloutBlock{
 				BasicBlock: notionapi.BasicBlock{
 					Object: notionapi.ObjectTypeBlock,
-					Type:   notionapi.BlockCallout,
+					Type:   notionapi.BlockTypeCallout,
 				},
 				Callout: notionapi.Callout{
 					RichText: []notionapi.RichText{},
@@ -361,7 +361,7 @@ func (r *nodeRenderer) renderBlockquote(w util.BufWriter, source []byte, node as
 			block = &notionapi.QuoteBlock{
 				BasicBlock: notionapi.BasicBlock{
 					Object: notionapi.ObjectTypeBlock,
-					Type:   notionapi.BlockQuote,
+					Type:   notionapi.BlockTypeQuote,
 				},
 				Quote: notionapi.Quote{
 					RichText: []notionapi.RichText{},
