@@ -1,8 +1,6 @@
 module github.com/sourcegraph/notionreposync
 
-go 1.23.0
-
-toolchain go1.23.9
+go 1.26.4
 
 require (
 	github.com/hexops/autogold/v2 v2.3.0

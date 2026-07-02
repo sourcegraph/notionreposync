@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/jomei/notionapi"
@@ -680,12 +681,12 @@ func (r *nodeRenderer) renderRawHTML(w util.BufWriter, source []byte, node ast.N
 	if entering {
 		n := node.(*ast.RawHTML)
 		l := n.Segments.Len()
-		var txt string
-		for i := 0; i < l; i++ {
+		var txt strings.Builder
+		for i := range l {
 			segment := n.Segments.At(i)
-			txt += string(segment.Value(source))
+			txt.WriteString(string(segment.Value(source)))
 		}
-		r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: txt}, Annotations: &notionapi.Annotations{Code: true}})
+		r.c.AppendRichText(&notionapi.RichText{Text: &notionapi.Text{Content: txt.String()}, Annotations: &notionapi.Annotations{Code: true}})
 		return ast.WalkSkipChildren, nil
 	}
 
@@ -851,10 +852,8 @@ var supportedLanguages = []string{
 }
 
 func supportedLanguageOrPlainText(lang string) string {
-	for _, l := range supportedLanguages {
-		if lang == l {
-			return lang
-		}
+	if slices.Contains(supportedLanguages, lang) {
+		return lang
 	}
 	return "plain text"
 }
